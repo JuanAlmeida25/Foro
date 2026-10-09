@@ -162,32 +162,31 @@
                 />
               </div>
 
-              <!-- Único espacio para la pregunta orientadora -->
+              <!-- Pregunta orientadora oficial (No editable de ninguna forma) -->
               <div class="field" style="border-top: none; padding-top: 16px;">
                 <div class="field-head">
                   <h3>
                     <span class="q">PREGUNTA ORIENTADORA</span>
-                    <label for="f-pregunta">Pregunta o tema a debatir</label>
+                    <span>Preguntas oficiales del foro</span>
                   </h3>
-                  <button
-                    v-if="state.aporte.pregunta !== PREGUNTAS_DEFECTO"
-                    class="btn ghost sm"
-                    type="button"
-                    style="font-size: 11px; padding: 2px 8px;"
-                    title="Restablecer las 4 preguntas orientadoras oficiales"
-                    @click="restaurarPreguntasOficiales"
-                  >
-                    ↺ Restaurar preguntas oficiales
-                  </button>
+                  <span class="badge-locked" title="Pregunta fija oficial: no se puede editar">
+                    🔒 Fija (No editable)
+                  </span>
                 </div>
-                <textarea
-                  id="f-pregunta"
-                  class="inp-pregunta"
-                  rows="4"
-                  placeholder="1. ¿Qué es un software?&#10;2. ¿Qué es una licencia de software?&#10;3. Tipos de licencias de software&#10;4. ¿Cuáles son las más adecuadas y por qué?"
-                  :value="state.aporte.pregunta"
-                  @input="setField('pregunta', $event.target.value)"
-                ></textarea>
+                <div class="pregunta-fija-box">
+                  <div
+                    v-if="state.aporteIdPublicado && state.aporte.pregunta && state.aporte.pregunta !== PREGUNTAS_DEFECTO"
+                    style="font-size: 15px; font-weight: 600; color: var(--fg); line-height: 1.45;"
+                  >
+                    {{ state.aporte.pregunta }}
+                  </div>
+                  <ol v-else class="pregunta-fija-list">
+                    <li><span class="num">1.</span> ¿Qué es un software?</li>
+                    <li><span class="num">2.</span> ¿Qué es una licencia de software?</li>
+                    <li><span class="num">3.</span> Tipos de licencias de software</li>
+                    <li><span class="num">4.</span> ¿Cuáles son las más adecuadas y por qué?</li>
+                  </ol>
+                </div>
               </div>
 
               <!-- Único espacio para la respuesta -->
@@ -449,14 +448,9 @@ function lsRead() {
 }
 
 function setField(k, v) {
+  if (k === 'pregunta') return // La pregunta orientadora es fija y no se puede editar
   state.aporte[k] = v
   lsWrite()
-}
-
-function restaurarPreguntasOficiales() {
-  state.aporte.pregunta = PREGUNTAS_DEFECTO
-  lsWrite()
-  toast('Preguntas orientadoras oficiales restablecidas')
 }
 
 function startBlank() {
@@ -640,14 +634,8 @@ async function publicarAporteEnForo() {
     })
     return
   }
-  if (!state.aporte.pregunta.trim()) {
-    toast('Por favor escribe la pregunta o tema')
-    currentTab.value = 'editor'
-    nextTick(() => {
-      const f = document.getElementById('f-pregunta')
-      if (f) f.focus()
-    })
-    return
+  if (!state.aporte.pregunta || !state.aporte.pregunta.trim()) {
+    state.aporte.pregunta = PREGUNTAS_DEFECTO
   }
   if (!state.aporte.respuesta.trim()) {
     toast('Por favor escribe tu respuesta')
