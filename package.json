@@ -4,16 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "server": "node server/index.js",
+    "dev:client": "vite",
+    "dev": "concurrently -n \"API,VITE\" -c \"cyan,green\" \"npm run server\" \"npm run dev:client\"",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "jspdf": "^2.5.1",
     "vue": "^3.4.21"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
+    "concurrently": "^9.1.2",
     "vite": "^5.2.8"
   }
 }
