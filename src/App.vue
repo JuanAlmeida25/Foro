@@ -374,7 +374,7 @@ const aporteSeleccionado = ref(null)
 const cargandoAportes = ref(false)
 const publicando = ref(false)
 
-// Autenticación de Administrador (Clave 2501)
+// Autenticación de Administrador
 const isAdmin = ref(false)
 const adminClave = ref('')
 const mostrarModalLoginAdmin = ref(false)
@@ -497,7 +497,7 @@ function cancelarEdicionYLimpiar() {
   toast('Listo para redactar un nuevo aporte')
 }
 
-/* ----- Manejo de Administrador (Clave 2501) ----- */
+/* ----- Manejo de Administrador ----- */
 function abrirLoginAdmin() {
   inputClaveAdmin.value = ''
   mostrarModalLoginAdmin.value = true
