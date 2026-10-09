@@ -993,10 +993,11 @@ textarea.doc.refs {
   font-size: 17px;
   font-family: var(--f-body);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--fg);
   margin: 0 0 10px 0;
   word-break: break-word;
+  white-space: pre-line;
   /* Se muestra la pregunta completa, sin recorte ni puntos suspensivos */
 }
 
@@ -1015,13 +1016,14 @@ textarea.inp-pregunta {
   background: var(--sunk);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 16px;
+  padding: 14px 16px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 1.5;
-  min-height: 80px;
+  line-height: 1.6;
+  min-height: 125px;
   resize: vertical;
   font-family: var(--f-body);
+  color: var(--fg);
 }
 
 textarea.inp-pregunta:focus {
@@ -1029,6 +1031,57 @@ textarea.inp-pregunta:focus {
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-soft);
   background: var(--surface);
+}
+
+/* Banner Destacado del Tema y Preguntas Orientadoras */
+.forum-topic-banner {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+
+.topic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.topic-tag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.topic-questions-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 16px;
+}
+
+.topic-questions-list li {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.4;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.topic-questions-list .num {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 15px;
 }
 
 /* Tarjeta de Calificación */
@@ -1204,6 +1257,7 @@ textarea.inp-pregunta:focus {
   font-size: 18px;
   font-weight: 600;
   color: var(--fg);
+  white-space: pre-line;
 }
 
 .post-question-text {

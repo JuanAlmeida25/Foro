@@ -1,3 +1,5 @@
+import { PREGUNTAS_DEFECTO } from '../data/constants.js'
+
 export function words(t) {
   t = (t || '').trim()
   return t ? t.split(/\s+/).length : 0
@@ -7,7 +9,7 @@ export function blank() {
   return {
     autor: '',
     ficha: '',
-    pregunta: '',
+    pregunta: PREGUNTAS_DEFECTO,
     respuesta: '',
     clave_edicion: ''
   }

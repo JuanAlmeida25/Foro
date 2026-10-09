@@ -169,12 +169,22 @@
                     <span class="q">PREGUNTA ORIENTADORA</span>
                     <label for="f-pregunta">Pregunta o tema a debatir</label>
                   </h3>
+                  <button
+                    v-if="state.aporte.pregunta !== PREGUNTAS_DEFECTO"
+                    class="btn ghost sm"
+                    type="button"
+                    style="font-size: 11px; padding: 2px 8px;"
+                    title="Restablecer las 4 preguntas orientadoras oficiales"
+                    @click="restaurarPreguntasOficiales"
+                  >
+                    ↺ Restaurar preguntas oficiales
+                  </button>
                 </div>
                 <textarea
                   id="f-pregunta"
                   class="inp-pregunta"
-                  rows="3"
-                  placeholder="Escribe la pregunta orientadora completa..."
+                  rows="4"
+                  placeholder="1. ¿Qué es un software?&#10;2. ¿Qué es una licencia de software?&#10;3. Tipos de licencias de software&#10;4. ¿Cuáles son las más adecuadas y por qué?"
                   :value="state.aporte.pregunta"
                   @input="setField('pregunta', $event.target.value)"
                 ></textarea>
@@ -324,7 +334,7 @@
 import { reactive, ref, computed, nextTick, onMounted } from 'vue'
 import ForoList from './components/ForoList.vue'
 import AporteDetalle from './components/AporteDetalle.vue'
-import { LS_KEY, PASOS } from './data/constants.js'
+import { LS_KEY, PASOS, PREGUNTAS_DEFECTO } from './data/constants.js'
 import { words, blank, fmtTime } from './utils/text.js'
 import {
   getAporteText,
@@ -420,7 +430,7 @@ function lsWrite() {
 function lsRead() {
   try {
     const saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null')
-    if (saved && saved.aporte && (saved.aporte.pregunta || saved.aporte.respuesta || saved.aporte.autor)) {
+    if (saved && saved.aporte) {
       Object.assign(state.aporte, saved.aporte)
       if (saved.aporteIdPublicado) {
         state.aporteIdPublicado = saved.aporteIdPublicado
@@ -432,6 +442,10 @@ function lsRead() {
   } catch (e) {
     // Mantener vacíos
   }
+  // Si la pregunta está vacía (por guardado anterior de pruebas), asegurar que aparezcan las preguntas oficiales
+  if (!state.aporte.pregunta || !state.aporte.pregunta.trim()) {
+    state.aporte.pregunta = PREGUNTAS_DEFECTO
+  }
 }
 
 function setField(k, v) {
@@ -439,25 +453,35 @@ function setField(k, v) {
   lsWrite()
 }
 
+function restaurarPreguntasOficiales() {
+  state.aporte.pregunta = PREGUNTAS_DEFECTO
+  lsWrite()
+  toast('Preguntas orientadoras oficiales restablecidas')
+}
+
 function startBlank() {
-  state.aporte.pregunta = ''
+  state.aporte.pregunta = PREGUNTAS_DEFECTO
   state.aporte.respuesta = ''
   lsWrite()
-  toast('Campos limpiados')
+  toast('Respuesta limpiada')
   nextTick(() => {
-    const f = document.getElementById('f-pregunta')
+    const f = document.getElementById('f-respuesta')
     if (f) f.focus()
   })
 }
 
 function irAEditorNuevo() {
+  if (!state.aporte.pregunta || !state.aporte.pregunta.trim()) {
+    state.aporte.pregunta = PREGUNTAS_DEFECTO
+    lsWrite()
+  }
   currentTab.value = 'editor'
 }
 
 function cancelarEdicionYLimpiar() {
   state.aporteIdPublicado = null
   state.claveActiva = ''
-  state.aporte.pregunta = ''
+  state.aporte.pregunta = PREGUNTAS_DEFECTO
   state.aporte.respuesta = ''
   state.aporte.clave_edicion = ''
   lsWrite()

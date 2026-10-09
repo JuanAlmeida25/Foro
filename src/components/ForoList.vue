@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="section-title" style="margin-bottom: 24px;">
+    <div class="section-title" style="margin-bottom: 20px;">
       <div>
         <h2>Aportes publicados en el foro</h2>
         <p>Explora las participaciones de tus compañeros, lee sus análisis y aporta réplicas crítico-reflexivas.</p>
@@ -10,6 +10,19 @@
           + Redactar mi aporte
         </button>
       </div>
+    </div>
+
+    <!-- Preguntas orientadoras del debate -->
+    <div class="forum-topic-banner">
+      <div class="topic-header">
+        <span class="topic-tag">🎯 Tema a debatir y preguntas orientadoras</span>
+      </div>
+      <ol class="topic-questions-list">
+        <li><span class="num">1.</span> ¿Qué es un software?</li>
+        <li><span class="num">2.</span> ¿Qué es una licencia de software?</li>
+        <li><span class="num">3.</span> Tipos de licencias de software</li>
+        <li><span class="num">4.</span> ¿Cuáles son las más adecuadas y por qué?</li>
+      </ol>
     </div>
 
     <div v-if="loading" class="none">Cargando aportes del foro…</div>
