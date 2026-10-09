@@ -1,16 +1,16 @@
-import { ALL_KEYS } from '../data/constants.js'
-
 export function words(t) {
   t = (t || '').trim()
   return t ? t.split(/\s+/).length : 0
 }
 
 export function blank() {
-  const o = {}
-  ALL_KEYS.forEach(k => {
-    o[k] = ''
-  })
-  return o
+  return {
+    autor: '',
+    ficha: '',
+    pregunta: '',
+    respuesta: '',
+    clave_edicion: ''
+  }
 }
 
 export function fmtTime(d) {
