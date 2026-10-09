@@ -26,6 +26,13 @@
           >
             {{ state.aporteIdPublicado ? 'Editar Aporte en Curso' : 'Redactar Mi Aporte' }}
           </button>
+          <button
+            :class="['nav-tab', { active: currentTab === 'ficha-tecnica' }]"
+            type="button"
+            @click="currentTab = 'ficha-tecnica'"
+          >
+            📘 Ficha Técnica y Normas
+          </button>
         </div>
 
         <div class="actions" style="align-items: center;">
@@ -283,6 +290,11 @@
           </div>
         </aside>
       </section>
+
+      <!-- VISTA 4: FICHA TÉCNICA Y MARCO NORMATIVO (SOLO INFORMATIVA) -->
+      <section v-else-if="currentTab === 'ficha-tecnica'">
+        <FichaTecnicaInfo />
+      </section>
     </main>
 
     <!-- MODAL: Iniciar Sesión como Administrador -->
@@ -333,6 +345,7 @@
 import { reactive, ref, computed, nextTick, onMounted } from 'vue'
 import ForoList from './components/ForoList.vue'
 import AporteDetalle from './components/AporteDetalle.vue'
+import FichaTecnicaInfo from './components/FichaTecnicaInfo.vue'
 import { LS_KEY, PASOS, PREGUNTAS_DEFECTO } from './data/constants.js'
 import { words, blank, fmtTime } from './utils/text.js'
 import {
@@ -389,12 +402,14 @@ const savedAtText = computed(() =>
 )
 
 const pillTone = computed(() => {
+  if (currentTab.value === 'ficha-tecnica') return 'ok'
   if (publicando.value) return 'busy'
   if (state.aporteIdPublicado) return 'ok'
   return 'warn'
 })
 
 const pillText = computed(() => {
+  if (currentTab.value === 'ficha-tecnica') return 'Guía Informativa'
   if (publicando.value) return 'Sincronizando con el servidor…'
   if (state.aporteIdPublicado) return 'Modo Edición / Publicado'
   return 'Borrador local'
