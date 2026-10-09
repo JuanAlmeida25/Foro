@@ -161,3 +161,60 @@ export async function buildPdf(aporte, replicas) {
 
   return doc.output('blob')
 }
+
+export async function buildPdfPreguntasSocializar(preguntas, respuestas) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' })
+  const M = 54
+  const W = doc.internal.pageSize.getWidth() - M * 2
+  const H = doc.internal.pageSize.getHeight()
+  let y = M
+
+  const ensure = h => {
+    if (y + h > H - M) {
+      doc.addPage()
+      y = M
+    }
+  }
+
+  function para(text, size, style, after, color) {
+    doc.setFont('helvetica', style || 'normal')
+    doc.setFontSize(size)
+    doc.setTextColor.apply(doc, color || [23, 32, 43])
+    const lh = size * 1.42
+    pdfSafe(text).split('\n').forEach(p => {
+      if (!p.trim()) {
+        y += lh * 0.4
+        return
+      }
+      doc.splitTextToSize(p, W).forEach(line => {
+        ensure(lh)
+        doc.text(line, M, y)
+        y += lh
+      })
+    })
+    y += after || 0
+  }
+
+  // Título principal
+  para('Preguntas y Respuestas: Socialización de Ficha Técnica', 16, 'bold', 16, [35, 64, 182])
+
+  preguntas.forEach((item, idx) => {
+    ensure(55)
+
+    // Solo se debe de ver la pregunta y la respuesta solamente
+    para((idx + 1) + '. ' + item.pregunta, 11, 'bold', 5, [23, 32, 43])
+
+    const r = (respuestas[item.id] || '').trim() || '(Sin respuesta registrada)'
+    para('Respuesta:', 9.5, 'bold', 3, [89, 101, 117])
+    para(r, 10, 'normal', 14, [40, 50, 65])
+
+    if (idx < preguntas.length - 1) {
+      ensure(12)
+      doc.setDrawColor(213, 219, 227)
+      doc.line(M, y, M + W, y)
+      y += 12
+    }
+  })
+
+  return doc.output('blob')
+}
