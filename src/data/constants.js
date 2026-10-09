@@ -8,8 +8,13 @@ export const PASOS = [
   { t: 'Invita', d: 'Formula una pregunta abierta para continuar el debate formativo.' }
 ]
 
+export const PREGUNTAS_DEFECTO = `1. ¿Qué es un software?
+2. ¿Qué es una licencia de software?
+3. Tipos de licencias de software
+4. ¿Cuáles son las más adecuadas y por qué?`
+
 export const DRAFT = {
-  pregunta: '¿Qué es una licencia de software y cuáles son las más adecuadas para nuestro proyecto formativo y por qué?',
+  pregunta: PREGUNTAS_DEFECTO,
   respuesta: `Una licencia de software es un contrato formal entre el titular de los derechos de autor (licenciante) y quien adquiere el derecho a utilizar el programa (licenciatario). A través de ella no se transfiere la propiedad del código, sino que se autorizan ciertos usos bajo condiciones específicas (alcance, duración, facultades de modificación, distribución comercial y límites de responsabilidad).
 
 En Colombia, el marco legal está regulado principalmente por la Ley 23 de 1982 sobre derechos de autor, el Decreto 1360 de 1989 (que define el software como «soporte lógico» protegido) y la Decisión Andina 351 de 1993. La utilización de software sin la respectiva licencia constituye infracción a los derechos patrimoniales de autor, tipificada en el Código Penal.
@@ -49,10 +54,14 @@ Esta guía detalla los pasos, criterios técnicos y recomendaciones para elabora
 4. Asigna una Clave o PIN de Autor (ej. 1234) para que en el futuro solo tú puedas modificar o editar tu entrada.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 PASO 2: FORMULAR LA PREGUNTA ORIENTADORA
+🎯 PASO 2: PREGUNTAS ORIENTADORAS DEL FORO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-En el campo "Pregunta o tema a debatir", escribe de forma completa y clara la pregunta orientadora de la evidencia:
-• Ejemplo recomendado: «¿Qué es una licencia de software y cuáles son las más adecuadas para nuestro proyecto formativo y por qué?»
+El campo "Pregunta o tema a debatir" contiene las 4 preguntas orientadoras oficiales del foro:
+1. ¿Qué es un software?
+2. ¿Qué es una licencia de software?
+3. Tipos de licencias de software
+4. ¿Cuáles son las más adecuadas y por qué?
+Asegúrate de responder a cada uno de estos puntos en tu argumentación.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✍️ PASO 3: REDACTAR EL CONTENIDO DE TU ENTRADA

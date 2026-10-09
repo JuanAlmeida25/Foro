@@ -88,10 +88,14 @@ Esta guía detalla los pasos, criterios técnicos y recomendaciones para elabora
 4. Asigna una Clave o PIN de Autor (ej. 1234) para que en el futuro solo tú puedas modificar o editar tu entrada.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 PASO 2: FORMULAR LA PREGUNTA ORIENTADORA
+🎯 PASO 2: PREGUNTAS ORIENTADORAS DEL FORO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-En el campo "Pregunta o tema a debatir", escribe de forma completa y clara la pregunta orientadora de la evidencia:
-• Ejemplo recomendado: «¿Qué es una licencia de software y cuáles son las más adecuadas para nuestro proyecto formativo y por qué?»
+El campo "Pregunta o tema a debatir" contiene las 4 preguntas orientadoras oficiales del foro:
+1. ¿Qué es un software?
+2. ¿Qué es una licencia de software?
+3. Tipos de licencias de software
+4. ¿Cuáles son las más adecuadas y por qué?
+Asegúrate de responder a cada uno de estos puntos en tu argumentación.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✍️ PASO 3: REDACTAR EL CONTENIDO DE TU ENTRADA
