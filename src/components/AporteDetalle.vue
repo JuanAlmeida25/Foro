@@ -185,7 +185,7 @@
       </div>
     </section>
 
-    <!-- MODAL: Calificar Aporte (Exclusivo Administrador con clave CLAVE-VIEJA) -->
+    <!-- MODAL: Calificar Aporte (Exclusivo Administrador) -->
     <div v-if="mostrarModalCalificar" class="modal-backdrop" @click.self="mostrarModalCalificar = false">
       <div class="modal-box">
         <h3>Calificar Aporte (Evaluación Docente)</h3>
@@ -230,7 +230,7 @@
       <div class="modal-box">
         <h3>Validación de Autor</h3>
         <p style="font-size: 14px; color: var(--muted);">
-          Ingresa la clave de autor que definiste al crear este aporte (o la clave de administrador CLAVE-VIEJA):
+          Ingresa la clave de autor que definiste al crear este aporte:
         </p>
 
         <div>
