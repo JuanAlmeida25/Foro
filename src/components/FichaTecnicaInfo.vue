@@ -313,6 +313,78 @@
         </div>
       </div>
     </section>
+
+    <!-- SECCIÓN 6: PREGUNTAS PARA SOCIALIZAR (DEBATE PEDAGÓGICO) -->
+    <section v-if="seccionActiva === 'preguntas-socializar'" class="ficha-card-block">
+      <div class="card-section-head">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div class="section-tag">Dinámica Formativa y Debate</div>
+            <h3>Preguntas Orientadoras para Socializar</h3>
+            <p>
+              Cuestionario reflexivo para debatir en mesas redondas, sesiones sincrónicas o talleres de formación ADSO. 
+              Estas preguntas vinculan la teoría técnica y legal con dilemas reales del desarrollo de software.
+            </p>
+          </div>
+          <div>
+            <button
+              class="btn sm"
+              type="button"
+              @click="copiarPreguntasSocializacion"
+            >
+              📋 Copiar todas las preguntas
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pautas pedagógicas para la socialización -->
+      <div class="callout-box" style="margin-bottom: 8px;">
+        <div class="callout-icon">👥</div>
+        <div>
+          <b>Metodología para la socialización en el ambiente de aprendizaje:</b>
+          <p>
+            Al responder y debatir estas preguntas con tu instructor y compañeros, sustenta tus argumentos 
+            mencionando normas específicas (ej. <em>ISO/IEC 25010</em>, <em>Ley 23 de 1982</em>, <em>Decreto 1360 de 1989</em>) 
+            y contrasta con casos reales experimentados en tu proyecto formativo.
+          </p>
+        </div>
+      </div>
+
+      <!-- Tarjetas de preguntas estructuradas -->
+      <div class="questions-socialize-grid">
+        <article
+          v-for="(item, idx) in preguntasSocializar"
+          :key="item.id"
+          class="question-soc-card"
+        >
+          <div class="soc-card-header">
+            <span class="soc-num">{{ idx + 1 }}</span>
+            <div style="flex: 1;">
+              <span class="soc-axis">{{ item.eje }}</span>
+              <h4 class="soc-title">{{ item.pregunta }}</h4>
+            </div>
+          </div>
+
+          <div class="soc-context">
+            <b>🎯 Contexto y dilema técnico:</b>
+            <p>{{ item.contexto }}</p>
+          </div>
+
+          <div class="soc-points">
+            <b>🔍 Puntos clave para orientar el debate:</b>
+            <ul>
+              <li v-for="pto in item.puntosClave" :key="pto">{{ pto }}</li>
+            </ul>
+          </div>
+
+          <div class="soc-norm-ref">
+            <span class="soc-norm-tag">⚖️ Soporte normativo:</span>
+            <span>{{ item.normas }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -326,7 +398,8 @@ const seccionTabs = [
   { id: 'estructura', icono: '📑', titulo: 'Estructura Estándar' },
   { id: 'normas-internacionales', icono: '🌐', titulo: 'Normas Internacionales' },
   { id: 'normas-colombianas', icono: '🇨🇴', titulo: 'Normatividad Colombiana' },
-  { id: 'ejemplo', icono: '📋', titulo: 'Plantilla de Ejemplo' }
+  { id: 'ejemplo', icono: '📋', titulo: 'Plantilla de Ejemplo' },
+  { id: 'preguntas-socializar', icono: '🗣️', titulo: 'Preguntas para Socializar' }
 ]
 
 const estructuraPartes = [
@@ -545,6 +618,91 @@ const normasColombianas = [
     impacto: 'Es el estándar oficial que rige las licitaciones públicas y auditorías técnicas de calidad de software ante entidades del Estado colombiano.'
   }
 ]
+
+const preguntasSocializar = [
+  {
+    id: 'ps1',
+    eje: 'Eje 1: Validez Contractual y Riesgos Técnicos',
+    pregunta: '¿Por qué la ficha técnica se considera la «partida de nacimiento» y el contrato técnico de un software? ¿Qué riesgos legales, económicos y reputacionales asume un equipo de desarrollo al entregar un producto sin este documento?',
+    contexto: 'Muchos clientes reclaman por lentitud, incompatibilidad en sus equipos o fallos no contemplados tras la entrega. Sin una ficha técnica firmada, no existe una línea base objetiva para definir responsabilidades.',
+    puntosClave: [
+      'Límites entre un defecto de software y una deficiencia de hardware del cliente.',
+      'Validez de la ficha técnica como anexo técnico en disputas legales o arbitramentos comerciales.',
+      'Cómo la falta de especificaciones genera sobrecostos en garantías y horas de soporte no remuneradas.'
+    ],
+    normas: 'ISO/IEC/IEEE 12207 (Procesos de documentación), Ley 527 de 1999 (Comercio electrónico y contratos).'
+  },
+  {
+    id: 'ps2',
+    eje: 'Eje 2: Priorización en el Modelo ISO/IEC 25010',
+    pregunta: 'Entre las 8 características de calidad de la norma ISO/IEC 25010 (Adecuación funcional, Rendimiento, Compatibilidad, Usabilidad, Fiabilidad, Seguridad, Mantenibilidad y Portabilidad), ¿cuáles dos consideran más críticas en su proyecto formativo y por qué?',
+    contexto: 'No es viable maximizar al 100% todas las características simultáneamente debido a restricciones de tiempo y presupuesto (ej. mayor cifrado y seguridad puede reducir la velocidad de respuesta).',
+    puntosClave: [
+      'Compromisos de diseño (trade-offs) entre seguridad, usabilidad y rendimiento.',
+      'Diferencias de prioridad según el tipo de software (ej. e-commerce financiero vs. aplicativo educativo).',
+      'Métricas objetivas para declarar en la ficha técnica si el requisito se cumplió satisfactoriamente.'
+    ],
+    normas: 'ISO/IEC 25010:2011 (Modelo SQRe), NTC-ISO/IEC 25010 (ICONTEC).'
+  },
+  {
+    id: 'ps3',
+    eje: 'Eje 3: Calibración de Requerimientos de Hardware y Software',
+    pregunta: '¿Qué método o criterio técnico debe utilizar un equipo de ingenieros para calcular los «requerimientos mínimos» y «requerimientos recomendados» sin inflar los costos de adquisición para el usuario ni provocar colapsos del sistema?',
+    contexto: 'Si declaras requerimientos excesivos, los usuarios no podrán instalar la aplicación; si declaras requerimientos muy bajos, el software se bloqueará por falta de memoria RAM o CPU.',
+    puntosClave: [
+      'Diferencia entre entorno de desarrollo (localhost) y entorno de producción real.',
+      'Uso de herramientas de profiling y pruebas de estrés (Apache JMeter, Lighthouse, Artillery).',
+      'Criterios para declarar compatibilidad con versiones antiguas de sistemas operativos y navegadores.'
+    ],
+    normas: 'ISO/IEC/IEEE 29148:2018 (Ingeniería de Requisitos), IEEE 830-1998 (Especificación de Requerimientos).'
+  },
+  {
+    id: 'ps4',
+    eje: 'Eje 4: Derechos de Autor y Titularidad en Colombia',
+    pregunta: 'Si un aprendiz o desarrollador crea un software como empleado o por contrato de prestación de servicios en Colombia: ¿Quién conserva los derechos morales y quién los patrimoniales según el Artículo 20 de la Ley 23 de 1982? ¿Cómo debe quedar estipulado en la ficha técnica?',
+    contexto: 'Existe una confusión habitual entre ser el autor del código y ser el dueño comercial del producto final. En Colombia, la ley establece presunciones legales que todo tecnólogo ADSO debe conocer.',
+    puntosClave: [
+      'Los derechos morales (paternidad e integridad de la obra) son irrenunciables e inalienables del programador.',
+      'Los derechos patrimoniales (comercialización, reproducción, lucro) se presumen transferidos a quien encarga la obra, salvo pacto en contrario por escrito.',
+      'Importancia de estipular en la ficha técnica el titular de la propiedad intelectual y el tipo de cesión.'
+    ],
+    normas: 'Ley 23 de 1982 (Art. 20), Ley 1450 de 2011 (Art. 28), Decisión Andina 351 de 1993, Decreto 1360 de 1989.'
+  },
+  {
+    id: 'ps5',
+    eje: 'Eje 5: Auditoría y Conflicto de Licencias (Copyleft vs. Permisivas)',
+    pregunta: 'Si en el desarrollo de su proyecto integran librerías con licencia GPL v3 (copyleft fuerte) y módulos con licencias permisivas (MIT o Apache 2.0), ¿qué consecuencias jurídicas tiene esto sobre la licencia final que pueden declarar en la ficha técnica?',
+    contexto: 'La cláusula viral del copyleft exige que cualquier obra derivada distribuida de un software GPL deba ser liberada bajo esa misma licencia, impidiendo comercializarlo como código cerrado.',
+    puntosClave: [
+      'El fenómeno de «infección de licencias» o incompatibilidad entre librerías.',
+      'Auditoría preventiva de dependencias (npm audit, licencias en package.json o pom.xml).',
+      'Cómo asesorar a un cliente si desea vender el software como propietario pero su equipo utilizó paquetes GPL.'
+    ],
+    normas: 'Decisión Andina 351 de 1993, Modelos de licenciamiento Open Source Initiative (OSI) y FSF.'
+  },
+  {
+    id: 'ps6',
+    eje: 'Eje 6: Versionamiento Semántico (SemVer) y Mantenimiento',
+    pregunta: '¿En qué momentos del ciclo de vida debe actualizarse la ficha técnica de un sistema? Ante la corrección de un bug menor (PATCH) frente a un cambio de arquitectura o motor de base de datos (MAJOR), ¿cómo se gestiona la versión de la ficha frente al cliente?',
+    contexto: 'Un error común es actualizar el código en el repositorio pero dejar la ficha técnica con la versión inicial desactualizada, provocando fallas operativas en futuras instalaciones.',
+    puntosClave: [
+      'Estructura de versionamiento semántico: MAJOR (incompatibilidades), MINOR (nuevas funciones), PATCH (corrección de errores).',
+      'Mantenimiento adaptativo (ej. nuevo sistema operativo) y su impacto en los requerimientos mínimos de la ficha.',
+      'El histórico de cambios o registro de versiones como garantía de calidad y transparencia técnica.'
+    ],
+    normas: 'ISO/IEC/IEEE 12207:2017 (Gestión de la configuración), Estándar Semantic Versioning 2.0.0.'
+  }
+]
+
+function copiarPreguntasSocializacion() {
+  const texto = preguntasSocializar.map((p, i) => {
+    return `${i + 1}. [${p.eje}]\nPregunta: ${p.pregunta}\nContexto: ${p.contexto}\nNormas: ${p.normas}\n`
+  }).join('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n')
+
+  navigator.clipboard.writeText(`PREGUNTAS ORIENTADORAS PARA SOCIALIZACIÓN Y DEBATE - FICHA TÉCNICA Y NORMATIVA DE SOFTWARE (ADSO - SENA)\n\n${texto}`)
+    .then(() => alert('¡Preguntas copiadas al portapapeles con éxito!'))
+    .catch(() => alert('No se pudo copiar automáticamente. Puedes seleccionar el texto directamente.'))
+}
 </script>
 
 <style scoped>
@@ -1138,5 +1296,136 @@ const normasColombianas = [
   font-size: 13.5px;
   color: var(--fg);
   line-height: 1.55;
+}
+
+/* Estilos de la Pestaña de Preguntas para Socializar */
+.questions-socialize-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.question-soc-card {
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  transition: transform .15s ease, border-color .15s ease;
+}
+
+.question-soc-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+
+.soc-card-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.soc-num {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.soc-axis {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: .05em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.soc-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.soc-context {
+  background: var(--surface);
+  border-left: 3px solid var(--warn);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.soc-context b {
+  font-size: 11.5px;
+  color: var(--warn);
+  display: block;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.soc-context p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.soc-points {
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.soc-points b {
+  font-size: 11.5px;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.soc-points ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.45;
+}
+
+.soc-points li {
+  margin-bottom: 4px;
+}
+
+.soc-norm-ref {
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--ok) 25%, var(--line));
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  color: var(--fg);
+  margin-top: auto;
+  line-height: 1.4;
+}
+
+.soc-norm-tag {
+  font-weight: 700;
+  color: var(--ok);
+  display: inline-block;
+  margin-right: 4px;
 }
 </style>
