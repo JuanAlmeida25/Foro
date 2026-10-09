@@ -1084,6 +1084,57 @@ textarea.inp-pregunta:focus {
   font-size: 15px;
 }
 
+/* Pregunta orientadora fija no editable */
+.badge-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--sunk);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 3px 9px;
+  border-radius: 999px;
+  user-select: none;
+}
+
+.pregunta-fija-box {
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 14px 18px;
+  user-select: none;
+  cursor: default;
+}
+
+.pregunta-fija-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pregunta-fija-list li {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.45;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pregunta-fija-list .num {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 15px;
+  min-width: 18px;
+}
+
 /* Tarjeta de Calificación */
 .grade-card {
   background: color-mix(in srgb, var(--ok) 8%, var(--surface));
