@@ -532,7 +532,8 @@ async function cargarForo() {
     const data = await fetchAportes()
     aportesList.value = data
   } catch (error) {
-    console.warn('API no disponible, usando modo local:', error)
+    console.error('No se pudieron cargar los aportes:', error)
+    toast(error.message || 'No se pudieron cargar los aportes')
   } finally {
     cargandoAportes.value = false
   }
@@ -665,12 +666,13 @@ async function publicarAporteEnForo() {
   const claveParaGuardar = state.claveActiva || state.aporte.clave_edicion || (isAdmin.value ? '2501' : '')
 
   publicando.value = true
+  const eraEdicion = !!state.aporteIdPublicado
   try {
     const resultado = await saveAporte(state.aporte, state.aporteIdPublicado, claveParaGuardar)
     state.aporteIdPublicado = resultado.id
     lsWrite()
     await cargarForo()
-    toast(state.aporteIdPublicado ? '¡Aporte actualizado exitosamente!' : '¡Aporte publicado en el Foro!')
+    toast(eraEdicion ? '¡Aporte actualizado exitosamente!' : '¡Aporte publicado en el Foro!')
     currentTab.value = 'foro'
   } catch (error) {
     alert(error.message || 'Error al conectar con la base de datos')
