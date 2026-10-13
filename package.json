@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "server": "node server/index.js",
+    "server": "node --env-file-if-exists=.env.local server/index.js",
     "dev:client": "vite",
     "dev": "concurrently -n \"API,VITE\" -c \"cyan,green\" \"npm run server\" \"npm run dev:client\"",
     "build": "vite build",
@@ -12,9 +12,11 @@
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {
+    "@vercel/functions": "^3.9.11",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "jspdf": "^2.5.1",
+    "pg": "^8.23.1",
     "vue": "^3.4.21"
   },
   "devDependencies": {
