@@ -16,6 +16,16 @@ import {
   limpiarFallos,
   MENSAJE_DEMASIADOS_INTENTOS
 } from './seguridad.js'
+import {
+  TIPOS_REACCION,
+  SQL_TOTAL_REACCIONES_APORTE,
+  SQL_TOTAL_REACCIONES_COMENTARIO,
+  votanteValido,
+  objetivoExiste,
+  alternarReaccion,
+  borrarReaccionesDeAporte,
+  borrarReaccionesDeComentario
+} from './reacciones.js'
 
 const app = express()
 
@@ -118,7 +128,8 @@ async function autorizarSobreAporte(req, res, id, clave, mensajeDenegado) {
 
 const COLUMNAS_APORTE = `
   id, autor, ficha, pregunta, respuesta, calificacion, retroalimentacion, calificado_at, created_at, updated_at,
-  (CASE WHEN clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave
+  (CASE WHEN clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave,
+  ${SQL_TOTAL_REACCIONES_APORTE('aportes.id')} as total_reacciones
 `
 
 /* ----- Rutas ----- */
@@ -170,7 +181,8 @@ app.get('/api/aportes', async (req, res) => {
         a.calificacion, a.retroalimentacion, a.calificado_at,
         a.created_at, a.updated_at,
         (CASE WHEN a.clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave,
-        (SELECT CAST(COUNT(*) AS INTEGER) FROM comentarios c WHERE c.aporte_id = a.id) as total_comentarios
+        (SELECT CAST(COUNT(*) AS INTEGER) FROM comentarios c WHERE c.aporte_id = a.id) as total_comentarios,
+        ${SQL_TOTAL_REACCIONES_APORTE('a.id')} as total_reacciones
       FROM aportes a
       ORDER BY a.created_at DESC
     `)
@@ -191,7 +203,8 @@ app.get('/api/aportes/:id', async (req, res) => {
     }
 
     const comentarios = await req.db.all(`
-      SELECT * FROM comentarios
+      SELECT comentarios.*, ${SQL_TOTAL_REACCIONES_COMENTARIO('comentarios.id')} as total_reacciones
+      FROM comentarios
       WHERE aporte_id = ?
       ORDER BY created_at ASC
     `, [req.params.id])
@@ -363,6 +376,7 @@ app.delete('/api/aportes/:id', async (req, res) => {
     )
     if (!aporte) return
 
+    await borrarReaccionesDeAporte(req.db, req.params.id)
     await req.db.run('DELETE FROM comentarios WHERE aporte_id = ?', [req.params.id])
     await req.db.run('DELETE FROM aportes WHERE id = ?', [req.params.id])
     res.json({ message: 'Aporte eliminado correctamente' })
@@ -414,11 +428,36 @@ app.delete('/api/comentarios/:id', async (req, res) => {
   try {
     if (!exigirAdmin(req, res, 'Solo el administrador puede eliminar comentarios')) return
 
+    await borrarReaccionesDeComentario(req.db, req.params.id)
     await req.db.run('DELETE FROM comentarios WHERE id = ?', [req.params.id])
     res.json({ message: 'Comentario eliminado' })
   } catch (error) {
     console.error('Error al eliminar comentario:', error)
     res.status(500).json({ error: 'Error al eliminar comentario' })
+  }
+})
+
+// Poner o quitar la reacción "Útil" de este navegador sobre un aporte o comentario
+app.post('/api/reacciones', async (req, res) => {
+  try {
+    const tipo = texto(req.body?.tipo)
+    const id = texto(req.body?.id)
+    const votante = req.body?.votante
+
+    if (!TIPOS_REACCION.includes(tipo) || !id) {
+      return res.status(400).json({ error: 'Reacción no válida' })
+    }
+    if (!votanteValido(votante)) {
+      return res.status(400).json({ error: 'Identificador de navegador no válido' })
+    }
+    if (!(await objetivoExiste(req.db, tipo, id))) {
+      return res.status(404).json({ error: tipo === 'aporte' ? 'Aporte no encontrado' : 'Comentario no encontrado' })
+    }
+
+    res.json(await alternarReaccion(req.db, tipo, id, votante))
+  } catch (error) {
+    console.error('Error al registrar reacción:', error)
+    res.status(500).json({ error: 'Error al registrar la reacción' })
   }
 })
 

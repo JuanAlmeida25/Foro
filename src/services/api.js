@@ -5,6 +5,8 @@
 // La clave de administrador nunca se guarda en el navegador: al iniciar sesión,
 // el servidor entrega un token temporal que se envía en cada petición.
 
+import { idVotante } from './reacciones.js'
+
 const API_BASE = '/api'
 const ADMIN_TOKEN_KEY = 'foro-admin-token'
 
@@ -147,5 +149,13 @@ export function addComentario(aporteId, comentarioData) {
 export function deleteComentario(id) {
   return request(`/comentarios/${encodeURIComponent(id)}`, {
     method: 'DELETE'
+  })
+}
+
+// Pone o quita la reacción "Útil" de este navegador. Responde { reaccionado, total }.
+export function toggleReaccion(tipo, id) {
+  return request('/reacciones', {
+    method: 'POST',
+    body: { tipo, id, votante: idVotante() }
   })
 }

@@ -104,6 +104,16 @@
           <p class="post-question-text">{{ aporte.respuesta }}</p>
         </div>
       </div>
+
+      <div class="reaction-row">
+        <BotonUtil
+          tipo="aporte"
+          :id="aporte.id"
+          :total="Number(aporte.total_reacciones) || 0"
+          @reaccionar="$emit('reaccionar', $event)"
+        />
+        <span class="reaction-hint">¿Te sirvió este aporte? Márcalo como útil.</span>
+      </div>
     </article>
 
     <!-- Sección de comentarios / réplicas -->
@@ -163,7 +173,7 @@
       <div v-if="!(aporte.comentarios || []).length" class="none">
         No hay comentarios en este aporte aún. ¡Sé el primero en responder!
       </div>
-      <div v-else class="list">
+      <TransitionGroup v-else tag="div" name="comment" class="list">
         <article
           v-for="c in aporte.comentarios"
           :key="c.id"
@@ -189,11 +199,20 @@
             "{{ c.comentario_citado }}"
           </blockquote>
           <p class="comment-text">{{ c.contenido }}</p>
+          <div class="reaction-row compact">
+            <BotonUtil
+              tipo="comentario"
+              :id="c.id"
+              :total="Number(c.total_reacciones) || 0"
+              @reaccionar="$emit('reaccionar', $event)"
+            />
+          </div>
         </article>
-      </div>
+      </TransitionGroup>
     </section>
 
     <!-- MODAL: Calificar Aporte (Exclusivo Administrador) -->
+    <Transition name="modal">
     <div v-if="mostrarModalCalificar" class="modal-backdrop" @click.self="mostrarModalCalificar = false">
       <div class="modal-box">
         <h3>Calificar Aporte (Evaluación Docente)</h3>
@@ -232,8 +251,10 @@
         </div>
       </div>
     </div>
+    </Transition>
 
     <!-- MODAL: Validar Clave Personal de Autor (para Editar o Eliminar) -->
+    <Transition name="modal">
     <div v-if="mostrarModalClave" class="modal-backdrop" @click.self="mostrarModalClave = false">
       <div class="modal-box">
         <h3>Validación de Autor</h3>
@@ -262,6 +283,7 @@
         </div>
       </div>
     </div>
+    </Transition>
   </div>
 </template>
 
@@ -269,6 +291,7 @@
 import { reactive, ref } from 'vue'
 import { fmtDate } from '../utils/text.js'
 import { getAporteText } from '../utils/exporter.js'
+import BotonUtil from './BotonUtil.vue'
 
 const props = defineProps({
   aporte: { type: Object, required: true },
@@ -282,6 +305,7 @@ const emit = defineEmits([
   'eliminar-aporte',
   'iniciar-edicion',
   'calificar-aporte',
+  'reaccionar',
   'toast'
 ])
 

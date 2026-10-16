@@ -8,6 +8,7 @@
 
 import { buildSeed, SEED_APORTE_ID } from './seed.js'
 import { hashClave } from './seguridad.js'
+import { SCHEMA_REACCIONES } from './reacciones.js'
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
 
@@ -49,7 +50,7 @@ const SCHEMA_POSTGRES = `
   );
 
   CREATE INDEX IF NOT EXISTS comentarios_aporte_id_idx ON comentarios (aporte_id);
-` + SCHEMA_SEGURIDAD
+` + SCHEMA_SEGURIDAD + SCHEMA_REACCIONES
 
 // Convierte "SELECT ... WHERE id = ?" en "SELECT ... WHERE id = $1" para Postgres.
 // Los valores siempre viajan como parámetros, nunca dentro del texto SQL.
@@ -153,6 +154,7 @@ async function createSqliteAdapter() {
 
   const { db } = await import('./db.js')
   db.exec(SCHEMA_SEGURIDAD)
+  db.exec(SCHEMA_REACCIONES)
 
   const adaptador = {
     async all(sql, params = []) {

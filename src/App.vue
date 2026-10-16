@@ -3,14 +3,18 @@
     <!-- Encabezado principal -->
     <header class="top">
       <div class="wrap">
-        <h1>Foro: Licenciamiento de software</h1>
+        <span class="top-eyebrow">⚖️ SENA • ADSO</span>
+        <h1>Foro: <span class="hl">Licenciamiento de software</span></h1>
+        <p class="top-sub">
+          Comparte tu análisis, revisa los aportes de tus compañeros y aprende a elegir la licencia correcta para cada proyecto.
+        </p>
       </div>
     </header>
 
     <!-- Barra de estado, navegación y control de roles -->
     <div class="bar">
       <div class="wrap">
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <nav class="nav-group" aria-label="Secciones">
           <button
             :class="['nav-tab', { active: currentTab === 'foro' }]"
             type="button"
@@ -34,13 +38,27 @@
             📘 Ficha Técnica y Normas
           </button>
           <button
+            :class="['nav-tab', { active: currentTab === 'licencias' }]"
+            type="button"
+            @click="currentTab = 'licencias'"
+          >
+            ⚖️ Licencias de Software
+          </button>
+          <button
+            :class="['nav-tab', { active: currentTab === 'glosario' }]"
+            type="button"
+            @click="currentTab = 'glosario'"
+          >
+            📖 Glosario
+          </button>
+          <button
             :class="['nav-tab', { active: currentTab === 'repaso' }]"
             type="button"
             @click="currentTab = 'repaso'"
           >
             🎯 Actividad de Repaso
           </button>
-        </div>
+        </nav>
 
         <div class="actions" style="align-items: center;">
           <!-- Estado de Administrador -->
@@ -85,6 +103,7 @@
 
     <!-- Contenido principal -->
     <main class="wrap" style="padding-block: 28px 60px;">
+      <Transition name="vista" mode="out-in">
       <!-- VISTA 1: EXPLORAR FORO -->
       <section v-if="currentTab === 'foro'">
         <ForoList
@@ -103,6 +122,7 @@
           @volver="currentTab = 'foro'"
           @comentario-agregado="handleNuevoComentario"
           @eliminar-comentario="handleEliminarComentario"
+          @reaccionar="handleReaccion"
           @eliminar-aporte="handleEliminarAporte"
           @iniciar-edicion="handleIniciarEdicion"
           @calificar-aporte="handleCalificarAporte"
@@ -303,13 +323,25 @@
         <FichaTecnicaInfo />
       </section>
 
+      <!-- VISTA: LICENCIAS MÁS USADAS EN EL DESARROLLO DE SOFTWARE (SOLO INFORMATIVA) -->
+      <section v-else-if="currentTab === 'licencias'">
+        <LicenciasInfo />
+      </section>
+
+      <!-- VISTA: GLOSARIO CON BÚSQUEDA EN VIVO -->
+      <section v-else-if="currentTab === 'glosario'">
+        <GlosarioInfo />
+      </section>
+
       <!-- VISTA 5: ACTIVIDAD DE REPASO (clasificar licencias y resolver casos) -->
       <section v-else-if="currentTab === 'repaso'">
         <ActividadRepaso />
       </section>
+      </Transition>
     </main>
 
     <!-- MODAL: Iniciar Sesión como Administrador -->
+    <Transition name="modal">
     <div v-if="mostrarModalLoginAdmin" class="modal-backdrop" @click.self="mostrarModalLoginAdmin = false">
       <div class="modal-box">
         <h3>Acceso Docente / Administrador</h3>
@@ -334,6 +366,7 @@
         </div>
       </div>
     </div>
+    </Transition>
 
     <!-- Modal de respaldo para copiar manualmente -->
     <div v-if="state.fallbackText !== null" class="fallback">
@@ -348,9 +381,11 @@
     </div>
 
     <!-- Toast global -->
-    <div v-if="state.toast" class="toast" role="status">
-      {{ state.toast }}
-    </div>
+    <Transition name="toast">
+      <div v-if="state.toast" :key="state.toast" class="toast" role="status">
+        {{ state.toast }}
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -360,6 +395,7 @@ import ForoList from './components/ForoList.vue'
 import AporteDetalle from './components/AporteDetalle.vue'
 import FichaTecnicaInfo from './components/FichaTecnicaInfo.vue'
 import { LS_KEY, PASOS, PREGUNTAS_DEFECTO } from './data/constants.js'
+import { yaReaccione, marcarReaccion } from './services/reacciones.js'
 import { words, blank, fmtTime } from './utils/text.js'
 import {
   getAporteText,
@@ -379,15 +415,18 @@ import {
   EVENTO_SESION_VENCIDA,
   verifyClaveAporte,
   calificarAporte,
+  toggleReaccion,
   addComentario,
   deleteComentario
 } from './services/api.js'
 
 // La actividad de repaso se carga solo al abrir su pestaña, para no agrandar el paquete inicial
 const ActividadRepaso = defineAsyncComponent(() => import('./components/ActividadRepaso.vue'))
+const LicenciasInfo = defineAsyncComponent(() => import('./components/LicenciasInfo.vue'))
+const GlosarioInfo = defineAsyncComponent(() => import('./components/GlosarioInfo.vue'))
 
 // Estado de navegación y administración
-const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'repaso'
+const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'licencias' | 'glosario' | 'repaso'
 const aportesList = ref([])
 const aporteSeleccionado = ref(null)
 const cargandoAportes = ref(false)
@@ -421,6 +460,8 @@ const savedAtText = computed(() =>
 
 const pillTone = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'ok'
+  if (currentTab.value === 'licencias') return 'ok'
+  if (currentTab.value === 'glosario') return 'ok'
   if (currentTab.value === 'repaso') return 'ok'
   if (publicando.value) return 'busy'
   if (state.aporteIdPublicado) return 'ok'
@@ -429,6 +470,8 @@ const pillTone = computed(() => {
 
 const pillText = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'Guía Informativa'
+  if (currentTab.value === 'licencias') return 'Guía de licencias'
+  if (currentTab.value === 'glosario') return 'Glosario'
   if (currentTab.value === 'repaso') return 'Práctica de repaso'
   if (publicando.value) return 'Sincronizando con el servidor…'
   if (state.aporteIdPublicado) return 'Modo Edición / Publicado'
@@ -633,6 +676,46 @@ async function handleNuevoComentario(datosComentario) {
     cargarForo()
   } catch (error) {
     toast('Error al publicar comentario en el servidor')
+  }
+}
+
+/* ----- Reacciones "Útil" ----- */
+
+// Cambia el total en todas las copias del aporte o comentario que tiene la app
+function fijarTotalReacciones(tipo, id, calcular) {
+  const detalle = aporteSeleccionado.value
+  if (tipo === 'aporte') {
+    if (detalle && detalle.id === id) detalle.total_reacciones = calcular(detalle.total_reacciones)
+    const enLista = aportesList.value.find(a => a.id === id)
+    if (enLista) enLista.total_reacciones = calcular(enLista.total_reacciones)
+  } else {
+    const comentario = detalle?.comentarios?.find(c => c.id === id)
+    if (comentario) comentario.total_reacciones = calcular(comentario.total_reacciones)
+  }
+}
+
+const reaccionesEnCurso = new Set()
+
+async function handleReaccion({ tipo, id }) {
+  const k = `${tipo}:${id}`
+  if (reaccionesEnCurso.has(k)) return
+  reaccionesEnCurso.add(k)
+
+  // Se muestra el cambio de inmediato y se corrige con la respuesta del servidor
+  const previo = yaReaccione(tipo, id)
+  marcarReaccion(tipo, id, !previo)
+  fijarTotalReacciones(tipo, id, t => Math.max(0, (Number(t) || 0) + (previo ? -1 : 1)))
+
+  try {
+    const { reaccionado, total } = await toggleReaccion(tipo, id)
+    marcarReaccion(tipo, id, reaccionado)
+    fijarTotalReacciones(tipo, id, () => total)
+  } catch (error) {
+    marcarReaccion(tipo, id, previo)
+    fijarTotalReacciones(tipo, id, t => Math.max(0, (Number(t) || 0) + (previo ? 1 : -1)))
+    toast(error.message || 'No se pudo registrar la reacción')
+  } finally {
+    reaccionesEnCurso.delete(k)
   }
 }
 
