@@ -1,6 +1,7 @@
 // Contenido inicial del foro: la guía oficial del instructor y su comentario demostrativo,
 // tal como están en server/foro.db. Se carga automáticamente cuando la base está vacía,
 // tanto en SQLite (local) como en Postgres (Vercel).
+// La guía no tiene clave de autor: solo el administrador puede editarla o eliminarla.
 
 const instructivoPregunta = 'Guía Oficial: ¿Cómo hacer y estructurar tu entrada (aporte) en el foro temático?'
 
@@ -54,7 +55,7 @@ export function buildSeed() {
       ficha: 'Ficha ADSO - SENA',
       pregunta: instructivoPregunta,
       respuesta: instructivoRespuesta,
-      clave_edicion: 'CLAVE-VIEJA',
+      clave_edicion: '',
       calificacion: 98,
       retroalimentacion: 'Cumple con todos los criterios de evaluación.',
       calificado_at: '2026-10-09T04:21:24.830Z',
