@@ -9,9 +9,10 @@ const APORTES = [
   { id: 'sin-fecha', created_at: null, updated_at: null }
 ]
 const ids = lista => lista.map(a => a.id)
+const porId = id => APORTES.find(a => a.id === id)
 
 test('Opciones de orden disponibles', () => {
-  assert.deepEqual(ORDENES.map(o => o.id), ['recientes', 'antiguos', 'editados'])
+  assert.deepEqual(ORDENES.map(o => o.id), ['recientes', 'antiguos', 'editados', 'utiles'])
   assert.equal(ORDEN_POR_DEFECTO, 'recientes', 'Por defecto se mantiene el orden del servidor: más recientes primero')
   assert.equal(buscarOrden('no-existe').id, 'recientes', 'Un criterio desconocido usa el orden por defecto')
 })
@@ -27,6 +28,12 @@ test('Más antiguos primero invierte el orden y deja al final los aportes sin fe
 
 test('Editados recientemente usa la fecha de la última edición', () => {
   assert.deepEqual(ids(ordenarAportes(APORTES, 'editados')), ['b', 'c', 'a', 'sin-fecha'])
+})
+
+test('Más útiles primero ordena por reacciones y desempata por fecha', () => {
+  const reacciones = { b: 2, a: 5, c: 2 } // c es más reciente que b; sin-fecha no tiene reacciones
+  const conReacciones = APORTES.map(a => (a.id in reacciones ? { ...a, total_reacciones: reacciones[a.id] } : { ...a }))
+  assert.deepEqual(ids(ordenarAportes(conReacciones, 'utiles')), ['a', 'c', 'b', 'sin-fecha'])
 })
 
 test('Sin fecha de edición se usa la de publicación', () => {
@@ -50,9 +57,9 @@ test('Ordenar no modifica la lista original y conserva los empates', () => {
 })
 
 test('Solo se marca como editado lo que cambió después de publicarse', () => {
-  assert.equal(fueEditado(APORTES[0]), true, 'b se editó dos días después')
-  assert.equal(fueEditado(APORTES[1]), false, 'a tiene la misma fecha de publicación y edición')
-  assert.equal(fueEditado(APORTES[3]), false, 'Sin fechas no se puede decir que se editó')
+  assert.equal(fueEditado(porId('b')), true, 'b se editó dos días después')
+  assert.equal(fueEditado(porId('a')), false, 'a tiene la misma fecha de publicación y edición')
+  assert.equal(fueEditado(porId('sin-fecha')), false, 'Sin fechas no se puede decir que se editó')
 })
 
 test('Fecha completa para el texto de ayuda', () => {

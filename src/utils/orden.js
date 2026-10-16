@@ -4,7 +4,8 @@
 export const ORDENES = [
   { id: 'recientes', label: 'Más recientes primero', campo: 'created_at', dir: 'desc' },
   { id: 'antiguos', label: 'Más antiguos primero', campo: 'created_at', dir: 'asc' },
-  { id: 'editados', label: 'Editados recientemente', campo: 'updated_at', dir: 'desc' }
+  { id: 'editados', label: 'Editados recientemente', campo: 'updated_at', dir: 'desc' },
+  { id: 'utiles', label: 'Más útiles primero', campo: 'created_at', dir: 'desc', porReacciones: true }
 ]
 
 export const ORDEN_POR_DEFECTO = 'recientes'
@@ -22,11 +23,13 @@ function tiempo(valor) {
 
 // Devuelve una copia de los aportes ordenada según el criterio elegido.
 // Los aportes sin fecha válida quedan siempre al final; los empates conservan el orden original.
+// En "Más útiles" manda el número de reacciones y la fecha solo desempata.
 export function ordenarAportes(aportes, idOrden) {
-  const { campo, dir } = buscarOrden(idOrden)
+  const { campo, dir, porReacciones } = buscarOrden(idOrden)
   return aportes
-    .map((a, i) => ({ a, i, t: tiempo(a[campo]) ?? (campo === 'updated_at' ? tiempo(a.created_at) : null) }))
+    .map((a, i) => ({ a, i, r: Number(a.total_reacciones) || 0, t: tiempo(a[campo]) ?? (campo === 'updated_at' ? tiempo(a.created_at) : null) }))
     .sort((x, y) => {
+      if (porReacciones && x.r !== y.r) return y.r - x.r
       if (x.t === null && y.t === null) return x.i - y.i
       if (x.t === null) return 1
       if (y.t === null) return -1
