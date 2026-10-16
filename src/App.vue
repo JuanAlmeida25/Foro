@@ -33,6 +33,13 @@
           >
             📘 Ficha Técnica y Normas
           </button>
+          <button
+            :class="['nav-tab', { active: currentTab === 'repaso' }]"
+            type="button"
+            @click="currentTab = 'repaso'"
+          >
+            🎯 Actividad de Repaso
+          </button>
         </div>
 
         <div class="actions" style="align-items: center;">
@@ -93,7 +100,6 @@
         <AporteDetalle
           :aporte="aporteSeleccionado"
           :is-admin="isAdmin"
-          :admin-clave="adminClave"
           @volver="currentTab = 'foro'"
           @comentario-agregado="handleNuevoComentario"
           @eliminar-comentario="handleEliminarComentario"
@@ -157,13 +163,14 @@
               <!-- Clave personal de autor -->
               <div style="padding-top: 10px; max-width: 320px;">
                 <label class="lbl" for="f-clave">
-                  Clave o PIN de Autor (para editar en el futuro)
+                  Clave o PIN de Autor (mínimo 4 caracteres, para editar en el futuro)
                 </label>
                 <input
                   id="f-clave"
                   class="inp"
                   type="password"
                   placeholder="Ej. 1234"
+                  autocomplete="new-password"
                   :value="state.aporte.clave_edicion"
                   @input="setField('clave_edicion', $event.target.value)"
                 />
@@ -295,6 +302,11 @@
       <section v-else-if="currentTab === 'ficha-tecnica'">
         <FichaTecnicaInfo />
       </section>
+
+      <!-- VISTA 5: ACTIVIDAD DE REPASO (clasificar licencias y resolver casos) -->
+      <section v-else-if="currentTab === 'repaso'">
+        <ActividadRepaso />
+      </section>
     </main>
 
     <!-- MODAL: Iniciar Sesión como Administrador -->
@@ -311,6 +323,7 @@
             v-model="inputClaveAdmin"
             class="inp"
             type="password"
+            autocomplete="current-password"
             placeholder="Clave..."
             @keyup.enter="verificarAdminLogin"
           />
@@ -342,7 +355,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, nextTick, onMounted } from 'vue'
+import { reactive, ref, computed, nextTick, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import ForoList from './components/ForoList.vue'
 import AporteDetalle from './components/AporteDetalle.vue'
 import FichaTecnicaInfo from './components/FichaTecnicaInfo.vue'
@@ -360,15 +373,21 @@ import {
   fetchAporteById,
   saveAporte,
   deleteAporte,
-  verifyAdmin,
+  loginAdmin,
+  verifyAdminSession,
+  clearAdminToken,
+  EVENTO_SESION_VENCIDA,
   verifyClaveAporte,
   calificarAporte,
   addComentario,
   deleteComentario
 } from './services/api.js'
 
+// La actividad de repaso se carga solo al abrir su pestaña, para no agrandar el paquete inicial
+const ActividadRepaso = defineAsyncComponent(() => import('./components/ActividadRepaso.vue'))
+
 // Estado de navegación y administración
-const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor'
+const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'repaso'
 const aportesList = ref([])
 const aporteSeleccionado = ref(null)
 const cargandoAportes = ref(false)
@@ -376,7 +395,6 @@ const publicando = ref(false)
 
 // Autenticación de Administrador
 const isAdmin = ref(false)
-const adminClave = ref('')
 const mostrarModalLoginAdmin = ref(false)
 const inputClaveAdmin = ref('')
 
@@ -403,6 +421,7 @@ const savedAtText = computed(() =>
 
 const pillTone = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'ok'
+  if (currentTab.value === 'repaso') return 'ok'
   if (publicando.value) return 'busy'
   if (state.aporteIdPublicado) return 'ok'
   return 'warn'
@@ -410,6 +429,7 @@ const pillTone = computed(() => {
 
 const pillText = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'Guía Informativa'
+  if (currentTab.value === 'repaso') return 'Práctica de repaso'
   if (publicando.value) return 'Sincronizando con el servidor…'
   if (state.aporteIdPublicado) return 'Modo Edición / Publicado'
   return 'Borrador local'
@@ -504,15 +524,17 @@ function abrirLoginAdmin() {
 }
 
 async function verificarAdminLogin() {
+  const clave = inputClaveAdmin.value.trim()
+  if (!clave) {
+    alert('Escribe la clave de administrador')
+    return
+  }
   try {
-    const res = await verifyAdmin(inputClaveAdmin.value.trim())
-    if (res.ok) {
-      isAdmin.value = true
-      adminClave.value = inputClaveAdmin.value.trim()
-      sessionStorage.setItem('admin_session', adminClave.value)
-      mostrarModalLoginAdmin.value = false
-      toast('¡Sesión de Administrador iniciada!')
-    }
+    await loginAdmin(clave)
+    isAdmin.value = true
+    inputClaveAdmin.value = ''
+    mostrarModalLoginAdmin.value = false
+    toast('¡Sesión de Administrador iniciada!')
   } catch (err) {
     alert(err.message || 'Clave de administrador incorrecta')
   }
@@ -520,9 +542,16 @@ async function verificarAdminLogin() {
 
 function cerrarSesionAdmin() {
   isAdmin.value = false
-  adminClave.value = ''
-  sessionStorage.removeItem('admin_session')
+  clearAdminToken()
   toast('Sesión de Administrador cerrada')
+}
+
+// El servidor avisó que el token de administrador venció
+function onSesionVencida() {
+  if (isAdmin.value) {
+    isAdmin.value = false
+    toast('Tu sesión de administrador venció. Vuelve a ingresar.')
+  }
 }
 
 /* ----- Carga de datos de la API ----- */
@@ -573,7 +602,6 @@ async function handleIniciarEdicion({ aporte, clave }) {
 async function handleCalificarAporte({ aporteId, calificacion, retroalimentacion }) {
   try {
     const aporteActualizado = await calificarAporte(aporteId, {
-      claveAdmin: adminClave.value || '2501',
       calificacion,
       retroalimentacion
     })
@@ -620,13 +648,13 @@ async function handleEliminarComentario(id) {
     toast('Comentario eliminado')
     cargarForo()
   } catch (error) {
-    toast('Error al eliminar comentario')
+    toast(error.message || 'Error al eliminar comentario')
   }
 }
 
 async function handleEliminarAporte({ id, clave }) {
   try {
-    await deleteAporte(id, clave || (isAdmin.value ? adminClave.value || '2501' : ''))
+    await deleteAporte(id, clave || '')
     if (state.aporteIdPublicado === id) {
       state.aporteIdPublicado = null
       state.claveActiva = ''
@@ -663,7 +691,18 @@ async function publicarAporteEnForo() {
     return
   }
 
-  const claveParaGuardar = state.claveActiva || state.aporte.clave_edicion || (isAdmin.value ? '2501' : '')
+  const claveParaGuardar = (state.claveActiva || state.aporte.clave_edicion || '').trim()
+
+  // Los aprendices necesitan una clave para poder editar su aporte después
+  if (!state.aporteIdPublicado && !isAdmin.value && claveParaGuardar.length < 4) {
+    toast('Define una clave de autor de al menos 4 caracteres')
+    currentTab.value = 'editor'
+    nextTick(() => {
+      const f = document.getElementById('f-clave')
+      if (f) f.focus()
+    })
+    return
+  }
 
   publicando.value = true
   const eraEdicion = !!state.aporteIdPublicado
@@ -731,14 +770,20 @@ async function downloadPdf() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   lsRead()
-  // Restaurar sesión de admin si ya estaba abierta en la pestaña
-  const savedAdmin = sessionStorage.getItem('admin_session')
-  if (savedAdmin === '2501') {
-    isAdmin.value = true
-    adminClave.value = savedAdmin
+  window.addEventListener(EVENTO_SESION_VENCIDA, onSesionVencida)
+  try {
+    sessionStorage.removeItem('admin_session') // sesión del sistema anterior
+  } catch (e) {
+    // Sin almacenamiento disponible
   }
   cargarForo()
+  // Restaurar la sesión de administrador si el token guardado sigue siendo válido
+  isAdmin.value = await verifyAdminSession()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(EVENTO_SESION_VENCIDA, onSesionVencida)
 })
 </script>

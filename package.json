@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@vercel/functions": "^3.9.11",
-    "cors": "^2.8.5",
     "express": "^4.21.2",
     "jspdf": "^2.5.1",
     "pg": "^8.23.1",

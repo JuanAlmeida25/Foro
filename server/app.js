@@ -1,13 +1,28 @@
 import express from 'express'
-import cors from 'cors'
 import crypto from 'node:crypto'
 import { getDb, dbEngine } from './database.js'
+import {
+  esClaveAdmin,
+  crearSesionAdmin,
+  sesionAdminValida,
+  tokenDeLaPeticion,
+  hashClave,
+  verificarClave,
+  LONGITUD_MINIMA_CLAVE_AUTOR,
+  LONGITUD_MAXIMA_CLAVE_AUTOR,
+  ipDeLaPeticion,
+  demasiadosIntentos,
+  registrarFallo,
+  limpiarFallos,
+  MENSAJE_DEMASIADOS_INTENTOS
+} from './seguridad.js'
 
 const app = express()
-const ADMIN_KEY = '2501'
 
-app.use(cors())
-app.use(express.json({ limit: '10mb' }))
+// El frontend y la API están en el mismo dominio, así que no se habilita CORS:
+// otras páginas web no pueden usar esta API desde el navegador de un visitante.
+app.disable('x-powered-by')
+app.use(express.json({ limit: '200kb' }))
 
 // Conectar con la base de datos antes de atender cualquier ruta de la API
 app.use('/api', async (req, res, next) => {
@@ -23,6 +38,91 @@ app.use('/api', async (req, res, next) => {
   }
 })
 
+// Identificar si la petición viene de un administrador con sesión válida
+app.use('/api', (req, res, next) => {
+  const token = tokenDeLaPeticion(req)
+  req.esAdmin = sesionAdminValida(token)
+  req.sesionVencida = Boolean(token) && !req.esAdmin
+  next()
+})
+
+/* ----- Utilidades ----- */
+
+// Toma un texto del cuerpo de la petición; cualquier otro tipo de dato cuenta como vacío
+const texto = valor => (typeof valor === 'string' ? valor.trim() : '')
+
+const LIMITES = {
+  autor: ['nombre', 120],
+  ficha: ['ficha', 60],
+  pregunta: ['pregunta', 2000],
+  respuesta: ['respuesta', 30000],
+  comentario_citado: ['cita', 2000],
+  contenido: ['comentario', 10000]
+}
+
+// Devuelve un mensaje de error si algún campo supera su tamaño máximo
+function campoDemasiadoLargo(campos) {
+  for (const [clave, valor] of Object.entries(campos)) {
+    const [nombre, maximo] = LIMITES[clave]
+    if (valor.length > maximo) {
+      return `El campo "${nombre}" es demasiado largo (máximo ${maximo.toLocaleString('es-CO')} caracteres).`
+    }
+  }
+  return null
+}
+
+// Solo deja pasar a un administrador con sesión válida
+function exigirAdmin(req, res, mensaje) {
+  if (req.esAdmin) return true
+  if (req.sesionVencida) {
+    res.status(401).json({ error: 'Tu sesión de administrador venció. Vuelve a ingresar.', sesionVencida: true })
+  } else {
+    res.status(403).json({ error: mensaje })
+  }
+  return false
+}
+
+// Comprueba que quien edita o elimina un aporte sea su autor (con su clave) o el administrador.
+// Devuelve el aporte si está autorizado; si no, responde con el error y devuelve null.
+async function autorizarSobreAporte(req, res, id, clave, mensajeDenegado) {
+  const ip = ipDeLaPeticion(req)
+  const objetivo = `aporte:${id}`
+
+  if (!req.esAdmin && await demasiadosIntentos(req.db, ip, objetivo)) {
+    res.status(429).json({ error: MENSAJE_DEMASIADOS_INTENTOS })
+    return null
+  }
+
+  const aporte = await req.db.get('SELECT id, clave_edicion FROM aportes WHERE id = ?', [id])
+  if (!aporte) {
+    res.status(404).json({ error: 'Aporte no encontrado' })
+    return null
+  }
+
+  if (req.esAdmin) return aporte
+
+  if (await verificarClave(texto(clave), aporte.clave_edicion)) {
+    await limpiarFallos(req.db, ip, objetivo)
+    return aporte
+  }
+
+  if (!aporte.clave_edicion) {
+    res.status(403).json({ error: 'Este aporte no tiene clave de autor: solo el administrador puede modificarlo.' })
+    return null
+  }
+
+  await registrarFallo(req.db, ip, objetivo)
+  res.status(401).json({ error: mensajeDenegado })
+  return null
+}
+
+const COLUMNAS_APORTE = `
+  id, autor, ficha, pregunta, respuesta, calificacion, retroalimentacion, calificado_at, created_at, updated_at,
+  (CASE WHEN clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave
+`
+
+/* ----- Rutas ----- */
+
 // Comprobar que la API y la base de datos responden (útil tras desplegar)
 app.get('/api/health', async (req, res) => {
   try {
@@ -34,13 +134,31 @@ app.get('/api/health', async (req, res) => {
   }
 })
 
-// Autenticación de Administrador
-app.post('/api/auth/admin', (req, res) => {
-  const { clave } = req.body
-  if (clave === ADMIN_KEY) {
-    return res.json({ ok: true, role: 'admin', message: 'Acceso de administrador concedido' })
+// Iniciar sesión de administrador: devuelve un token que vence en 8 horas
+app.post('/api/auth/admin', async (req, res) => {
+  try {
+    const ip = ipDeLaPeticion(req)
+    if (await demasiadosIntentos(req.db, ip, 'admin')) {
+      return res.status(429).json({ ok: false, error: MENSAJE_DEMASIADOS_INTENTOS })
+    }
+
+    if (!esClaveAdmin(texto(req.body?.clave))) {
+      await registrarFallo(req.db, ip, 'admin')
+      return res.status(401).json({ ok: false, error: 'Clave de administrador incorrecta' })
+    }
+
+    await limpiarFallos(req.db, ip, 'admin')
+    const { token, expira } = crearSesionAdmin()
+    res.json({ ok: true, role: 'admin', token, expira, message: 'Acceso de administrador concedido' })
+  } catch (error) {
+    console.error('Error al iniciar sesión de administrador:', error)
+    res.status(500).json({ ok: false, error: 'Error al iniciar sesión' })
   }
-  return res.status(401).json({ ok: false, error: 'Clave de administrador incorrecta' })
+})
+
+// Saber si la sesión de administrador guardada en el navegador sigue siendo válida
+app.get('/api/auth/sesion', (req, res) => {
+  res.json({ admin: req.esAdmin })
 })
 
 // Obtener todos los aportes con conteo de comentarios
@@ -66,11 +184,7 @@ app.get('/api/aportes', async (req, res) => {
 // Obtener un aporte específico por ID con sus comentarios
 app.get('/api/aportes/:id', async (req, res) => {
   try {
-    const aporte = await req.db.get(`
-      SELECT id, autor, ficha, pregunta, respuesta, calificacion, retroalimentacion, calificado_at, created_at, updated_at,
-      (CASE WHEN clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave
-      FROM aportes WHERE id = ?
-    `, [req.params.id])
+    const aporte = await req.db.get(`SELECT ${COLUMNAS_APORTE} FROM aportes WHERE id = ?`, [req.params.id])
 
     if (!aporte) {
       return res.status(404).json({ error: 'Aporte no encontrado' })
@@ -92,43 +206,57 @@ app.get('/api/aportes/:id', async (req, res) => {
   }
 })
 
-// Publicar un nuevo aporte (con clave personal de autor)
+// Publicar un nuevo aporte (con clave personal de autor obligatoria)
 app.post('/api/aportes', async (req, res) => {
   try {
-    const { autor, ficha, pregunta, respuesta, clave_edicion } = req.body
-    if (!autor || !autor.trim()) {
+    const autor = texto(req.body?.autor)
+    const ficha = texto(req.body?.ficha)
+    const pregunta = texto(req.body?.pregunta)
+    const respuesta = texto(req.body?.respuesta)
+    const clave = texto(req.body?.clave_edicion)
+
+    if (!autor) {
       return res.status(400).json({ error: 'El nombre del autor es obligatorio' })
     }
-    if (!pregunta || !pregunta.trim()) {
+    if (!pregunta) {
       return res.status(400).json({ error: 'La pregunta es obligatoria' })
     }
-    if (!respuesta || !respuesta.trim()) {
+    if (!respuesta) {
       return res.status(400).json({ error: 'La respuesta es obligatoria' })
+    }
+    const demasiadoLargo = campoDemasiadoLargo({ autor, ficha, pregunta, respuesta })
+    if (demasiadoLargo) {
+      return res.status(400).json({ error: demasiadoLargo })
+    }
+
+    // El administrador puede publicar sin clave (solo él podrá editarlo); los aprendices necesitan una
+    if (!req.esAdmin && clave.length < LONGITUD_MINIMA_CLAVE_AUTOR) {
+      return res.status(400).json({
+        error: `Define una clave de autor de al menos ${LONGITUD_MINIMA_CLAVE_AUTOR} caracteres para poder editar tu aporte después.`
+      })
+    }
+    if (clave.length > LONGITUD_MAXIMA_CLAVE_AUTOR) {
+      return res.status(400).json({ error: `La clave de autor puede tener máximo ${LONGITUD_MAXIMA_CLAVE_AUTOR} caracteres.` })
     }
 
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
-    const clave = (clave_edicion || '').trim()
 
     await req.db.run(`
       INSERT INTO aportes (id, autor, ficha, pregunta, respuesta, clave_edicion, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
-      autor.trim(),
-      (ficha || '').trim(),
-      pregunta.trim(),
-      respuesta.trim(),
-      clave,
+      autor,
+      ficha,
+      pregunta,
+      respuesta,
+      clave ? await hashClave(clave) : '',
       now,
       now
     ])
 
-    const nuevoAporte = await req.db.get(`
-      SELECT id, autor, ficha, pregunta, respuesta, calificacion, retroalimentacion, calificado_at, created_at, updated_at,
-      (CASE WHEN clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave
-      FROM aportes WHERE id = ?
-    `, [id])
+    const nuevoAporte = await req.db.get(`SELECT ${COLUMNAS_APORTE} FROM aportes WHERE id = ?`, [id])
 
     res.status(201).json({ ...nuevoAporte, comentarios: [] })
   } catch (error) {
@@ -137,43 +265,41 @@ app.post('/api/aportes', async (req, res) => {
   }
 })
 
-// Verificar si una clave es válida para editar un aporte (autor o admin 2501)
+// Verificar si una clave permite editar un aporte (autor con su clave, o administrador con sesión)
 app.post('/api/aportes/:id/verificar-clave', async (req, res) => {
   try {
-    const { clave } = req.body
-    const aporte = await req.db.get('SELECT clave_edicion FROM aportes WHERE id = ?', [req.params.id])
-    if (!aporte) {
-      return res.status(404).json({ error: 'Aporte no encontrado' })
-    }
-
-    const esAdmin = clave === ADMIN_KEY
-    const esAutor = (aporte.clave_edicion && aporte.clave_edicion === clave) || !aporte.clave_edicion
-
-    if (esAdmin || esAutor) {
-      return res.json({ ok: true, esAdmin })
-    }
-
-    return res.status(401).json({ ok: false, error: 'Clave incorrecta. Solo el autor del aporte o el administrador pueden editarlo.' })
+    const aporte = await autorizarSobreAporte(
+      req, res, req.params.id, req.body?.clave,
+      'Clave incorrecta. Solo el autor del aporte o el administrador pueden editarlo.'
+    )
+    if (!aporte) return
+    res.json({ ok: true, esAdmin: req.esAdmin })
   } catch (error) {
     console.error('Error al verificar clave:', error)
     res.status(500).json({ error: 'Error al verificar clave' })
   }
 })
 
-// Actualizar un aporte (solo el autor con su clave o el admin con 2501)
+// Actualizar un aporte (solo el autor con su clave o el administrador)
 app.put('/api/aportes/:id', async (req, res) => {
   try {
-    const { autor, ficha, pregunta, respuesta, clave } = req.body
-    const aporte = await req.db.get('SELECT clave_edicion FROM aportes WHERE id = ?', [req.params.id])
-    if (!aporte) {
-      return res.status(404).json({ error: 'Aporte no encontrado' })
+    const aporte = await autorizarSobreAporte(
+      req, res, req.params.id, req.body?.clave,
+      'No tienes permiso para editar este aporte. Clave incorrecta.'
+    )
+    if (!aporte) return
+
+    const autor = texto(req.body?.autor)
+    const ficha = texto(req.body?.ficha)
+    const pregunta = texto(req.body?.pregunta)
+    const respuesta = texto(req.body?.respuesta)
+
+    if (!autor || !pregunta || !respuesta) {
+      return res.status(400).json({ error: 'El nombre, la pregunta y la respuesta son obligatorios' })
     }
-
-    const esAdmin = clave === ADMIN_KEY
-    const esAutor = (aporte.clave_edicion && aporte.clave_edicion === clave) || !aporte.clave_edicion
-
-    if (!esAdmin && !esAutor) {
-      return res.status(403).json({ error: 'No tienes permiso para editar este aporte. Clave incorrecta.' })
+    const demasiadoLargo = campoDemasiadoLargo({ autor, ficha, pregunta, respuesta })
+    if (demasiadoLargo) {
+      return res.status(400).json({ error: demasiadoLargo })
     }
 
     const now = new Date().toISOString()
@@ -181,19 +307,9 @@ app.put('/api/aportes/:id', async (req, res) => {
       UPDATE aportes
       SET autor = ?, ficha = ?, pregunta = ?, respuesta = ?, updated_at = ?
       WHERE id = ?
-    `, [
-      (autor || '').trim(),
-      (ficha || '').trim(),
-      (pregunta || '').trim(),
-      (respuesta || '').trim(),
-      now,
-      req.params.id
-    ])
+    `, [autor, ficha, pregunta, respuesta, now, req.params.id])
 
-    const actualizado = await req.db.get(`
-      SELECT id, autor, ficha, pregunta, respuesta, calificacion, retroalimentacion, calificado_at, created_at, updated_at
-      FROM aportes WHERE id = ?
-    `, [req.params.id])
+    const actualizado = await req.db.get(`SELECT ${COLUMNAS_APORTE} FROM aportes WHERE id = ?`, [req.params.id])
 
     res.json(actualizado)
   } catch (error) {
@@ -202,22 +318,24 @@ app.put('/api/aportes/:id', async (req, res) => {
   }
 })
 
-// Calificar un aporte (Exclusivo para el Administrador con clave 2501)
+// Calificar un aporte (exclusivo del administrador)
 app.post('/api/aportes/:id/calificar', async (req, res) => {
   try {
-    const { claveAdmin, calificacion, retroalimentacion } = req.body
-    if (claveAdmin !== ADMIN_KEY) {
-      return res.status(403).json({ error: 'Solo el administrador puede calificar aportes' })
-    }
+    if (!exigirAdmin(req, res, 'Solo el administrador puede calificar aportes')) return
 
     const aporte = await req.db.get('SELECT id FROM aportes WHERE id = ?', [req.params.id])
     if (!aporte) {
       return res.status(404).json({ error: 'Aporte no encontrado' })
     }
 
-    const notaNum = parseInt(calificacion, 10)
+    const notaNum = parseInt(req.body?.calificacion, 10)
     if (isNaN(notaNum) || notaNum < 0 || notaNum > 100) {
       return res.status(400).json({ error: 'La calificación debe ser un valor numérico entre 0 y 100' })
+    }
+
+    const retroalimentacion = texto(req.body?.retroalimentacion)
+    if (retroalimentacion.length > 5000) {
+      return res.status(400).json({ error: 'La retroalimentación es demasiado larga (máximo 5.000 caracteres).' })
     }
 
     const now = new Date().toISOString()
@@ -225,17 +343,9 @@ app.post('/api/aportes/:id/calificar', async (req, res) => {
       UPDATE aportes
       SET calificacion = ?, retroalimentacion = ?, calificado_at = ?
       WHERE id = ?
-    `, [
-      notaNum,
-      (retroalimentacion || '').trim(),
-      now,
-      req.params.id
-    ])
+    `, [notaNum, retroalimentacion, now, req.params.id])
 
-    const calificado = await req.db.get(`
-      SELECT id, autor, ficha, pregunta, respuesta, calificacion, retroalimentacion, calificado_at, created_at, updated_at
-      FROM aportes WHERE id = ?
-    `, [req.params.id])
+    const calificado = await req.db.get(`SELECT ${COLUMNAS_APORTE} FROM aportes WHERE id = ?`, [req.params.id])
 
     res.json(calificado)
   } catch (error) {
@@ -244,21 +354,14 @@ app.post('/api/aportes/:id/calificar', async (req, res) => {
   }
 })
 
-// Eliminar un aporte (Admin 2501 o autor con su clave)
+// Eliminar un aporte (autor con su clave o administrador)
 app.delete('/api/aportes/:id', async (req, res) => {
   try {
-    const clave = req.query.clave || req.body?.clave
-    const aporte = await req.db.get('SELECT clave_edicion FROM aportes WHERE id = ?', [req.params.id])
-    if (!aporte) {
-      return res.status(404).json({ error: 'Aporte no encontrado' })
-    }
-
-    const esAdmin = clave === ADMIN_KEY
-    const esAutor = (aporte.clave_edicion && aporte.clave_edicion === clave) || !aporte.clave_edicion
-
-    if (!esAdmin && !esAutor) {
-      return res.status(403).json({ error: 'Permiso denegado. Clave incorrecta para eliminar este aporte.' })
-    }
+    const aporte = await autorizarSobreAporte(
+      req, res, req.params.id, req.query.clave ?? req.body?.clave,
+      'Permiso denegado. Clave incorrecta para eliminar este aporte.'
+    )
+    if (!aporte) return
 
     await req.db.run('DELETE FROM comentarios WHERE aporte_id = ?', [req.params.id])
     await req.db.run('DELETE FROM aportes WHERE id = ?', [req.params.id])
@@ -273,10 +376,16 @@ app.delete('/api/aportes/:id', async (req, res) => {
 app.post('/api/aportes/:id/comentarios', async (req, res) => {
   try {
     const aporteId = req.params.id
-    const { autor, comentario_citado, contenido } = req.body
+    const autor = texto(req.body?.autor)
+    const comentarioCitado = texto(req.body?.comentario_citado)
+    const contenido = texto(req.body?.contenido)
 
-    if (!autor || !autor.trim() || !contenido || !contenido.trim()) {
+    if (!autor || !contenido) {
       return res.status(400).json({ error: 'El autor y el comentario son requeridos' })
+    }
+    const demasiadoLargo = campoDemasiadoLargo({ autor, comentario_citado: comentarioCitado, contenido })
+    if (demasiadoLargo) {
+      return res.status(400).json({ error: demasiadoLargo })
     }
 
     const aporte = await req.db.get('SELECT id FROM aportes WHERE id = ?', [aporteId])
@@ -290,14 +399,7 @@ app.post('/api/aportes/:id/comentarios', async (req, res) => {
     await req.db.run(`
       INSERT INTO comentarios (id, aporte_id, autor, comentario_citado, contenido, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [
-      id,
-      aporteId,
-      autor.trim(),
-      (comentario_citado || '').trim(),
-      contenido.trim(),
-      now
-    ])
+    `, [id, aporteId, autor, comentarioCitado, contenido, now])
 
     const nuevoComentario = await req.db.get('SELECT * FROM comentarios WHERE id = ?', [id])
     res.status(201).json(nuevoComentario)
@@ -307,9 +409,11 @@ app.post('/api/aportes/:id/comentarios', async (req, res) => {
   }
 })
 
-// Eliminar un comentario (Admin o usuario)
+// Eliminar un comentario (exclusivo del administrador)
 app.delete('/api/comentarios/:id', async (req, res) => {
   try {
+    if (!exigirAdmin(req, res, 'Solo el administrador puede eliminar comentarios')) return
+
     await req.db.run('DELETE FROM comentarios WHERE id = ?', [req.params.id])
     res.json({ message: 'Comentario eliminado' })
   } catch (error) {
@@ -321,6 +425,18 @@ app.delete('/api/comentarios/:id', async (req, res) => {
 // Cualquier otra ruta /api que no exista
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Ruta de la API no encontrada' })
+})
+
+// JSON mal formado o demasiado grande
+app.use((error, req, res, next) => {
+  if (error.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'El contenido enviado es demasiado grande.' })
+  }
+  if (error.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'El contenido enviado no es válido.' })
+  }
+  console.error('Error inesperado:', error)
+  res.status(500).json({ error: 'Error inesperado del servidor' })
 })
 
 export default app

@@ -20,6 +20,13 @@
             ⭐ {{ aporte.calificacion !== null && aporte.calificacion !== undefined ? 'Modificar Calificación' : 'Calificar Aporte' }}
           </button>
           <button
+            class="btn sm"
+            type="button"
+            @click="$emit('iniciar-edicion', { aporte, clave: '' })"
+          >
+            ✏️ Editar (Admin)
+          </button>
+          <button
             class="btn ghost sm danger"
             type="button"
             @click="confirmarEliminarAdmin"
@@ -28,8 +35,8 @@
           </button>
         </template>
 
-        <!-- Botones de Usuario / Autor -->
-        <template v-else>
+        <!-- Botones de Usuario / Autor (solo si el aporte tiene clave de autor) -->
+        <template v-else-if="aporte.tiene_clave">
           <button
             class="btn sm"
             type="button"
@@ -167,10 +174,11 @@
             <div style="display: flex; gap: 10px; align-items: center;">
               <time>{{ formatFecha(c.created_at) }}</time>
               <button
+                v-if="isAdmin"
                 class="btn ghost sm danger"
                 style="padding: 2px 6px; font-size: 11px;"
                 type="button"
-                :title="isAdmin ? 'Eliminar comentario (Admin)' : 'Eliminar comentario'"
+                title="Eliminar comentario (Admin)"
                 @click="$emit('eliminar-comentario', c.id)"
               >
                 ✕
@@ -240,6 +248,7 @@
             v-model="claveIngresada"
             class="inp"
             type="password"
+            autocomplete="current-password"
             placeholder="Ingresa tu clave..."
             @keyup.enter="confirmarAccionConClave"
           />
@@ -263,8 +272,7 @@ import { getAporteText } from '../utils/exporter.js'
 
 const props = defineProps({
   aporte: { type: Object, required: true },
-  isAdmin: { type: Boolean, default: false },
-  adminClave: { type: String, default: '' }
+  isAdmin: { type: Boolean, default: false }
 })
 
 const emit = defineEmits([
@@ -329,7 +337,7 @@ function enviarCalificacion() {
 
 function confirmarEliminarAdmin() {
   if (confirm('¿Confirmas como Administrador la eliminación definitiva de este aporte?')) {
-    emit('eliminar-aporte', { id: props.aporte.id, clave: props.adminClave || '2501' })
+    emit('eliminar-aporte', { id: props.aporte.id, clave: '' })
   }
 }
 

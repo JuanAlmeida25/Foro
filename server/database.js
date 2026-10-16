@@ -6,11 +6,23 @@
 //
 // Las rutas escriben SQL con marcadores "?" y esta capa los adapta a cada motor.
 
-import { buildSeed } from './seed.js'
+import { buildSeed, SEED_APORTE_ID } from './seed.js'
+import { hashClave } from './seguridad.js'
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
 
 export const dbEngine = connectionString ? 'postgres' : 'sqlite'
+
+// Tabla para limitar los intentos de clave incorrectos (igual en SQLite y Postgres)
+const SCHEMA_SEGURIDAD = `
+  CREATE TABLE IF NOT EXISTS intentos_fallidos (
+    ip TEXT NOT NULL,
+    objetivo TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS intentos_fallidos_idx ON intentos_fallidos (ip, objetivo, created_at);
+`
 
 const SCHEMA_POSTGRES = `
   CREATE TABLE IF NOT EXISTS aportes (
@@ -37,7 +49,7 @@ const SCHEMA_POSTGRES = `
   );
 
   CREATE INDEX IF NOT EXISTS comentarios_aporte_id_idx ON comentarios (aporte_id);
-`
+` + SCHEMA_SEGURIDAD
 
 // Convierte "SELECT ... WHERE id = ?" en "SELECT ... WHERE id = $1" para Postgres.
 // Los valores siempre viajan como parámetros, nunca dentro del texto SQL.
@@ -62,14 +74,7 @@ async function createPostgresAdapter() {
     attachDatabasePool(pool)
   }
 
-  try {
-    await prepararPostgres(pool)
-  } catch (error) {
-    await pool.end().catch(() => {})
-    throw error
-  }
-
-  return {
+  const adaptador = {
     async all(sql, params = []) {
       const { rows } = await pool.query(toPostgresParams(sql), params)
       return rows
@@ -83,6 +88,16 @@ async function createPostgresAdapter() {
       return { changes: result.rowCount }
     }
   }
+
+  try {
+    await prepararPostgres(pool)
+    await migrarSeguridad(adaptador)
+  } catch (error) {
+    await pool.end().catch(() => {})
+    throw error
+  }
+
+  return adaptador
 }
 
 // Crea las tablas y carga la guía inicial la primera vez.
@@ -137,7 +152,9 @@ async function createSqliteAdapter() {
   }
 
   const { db } = await import('./db.js')
-  return {
+  db.exec(SCHEMA_SEGURIDAD)
+
+  const adaptador = {
     async all(sql, params = []) {
       return db.prepare(sql).all(...params)
     },
@@ -148,6 +165,30 @@ async function createSqliteAdapter() {
       const result = db.prepare(sql).run(...params)
       return { changes: Number(result.changes) }
     }
+  }
+
+  await migrarSeguridad(adaptador)
+  return adaptador
+}
+
+// Ajustes de seguridad sobre datos que ya existían (se pueden ejecutar muchas veces sin problema):
+// 1. La guía oficial tenía como clave de autor "2501", la antigua clave pública de administrador.
+//    Ahora no tiene clave de autor, así que solo el administrador puede modificarla.
+// 2. Las claves de autor guardadas tal cual se reemplazan por su versión cifrada.
+async function migrarSeguridad(db) {
+  await db.run(
+    "UPDATE aportes SET clave_edicion = '' WHERE id = ? AND clave_edicion = ?",
+    [SEED_APORTE_ID, '2501']
+  )
+
+  const pendientes = await db.all(
+    "SELECT id, clave_edicion FROM aportes WHERE clave_edicion != '' AND clave_edicion NOT LIKE 'scrypt$%'"
+  )
+  for (const fila of pendientes) {
+    await db.run(
+      'UPDATE aportes SET clave_edicion = ? WHERE id = ? AND clave_edicion = ?',
+      [await hashClave(fila.clave_edicion), fila.id, fila.clave_edicion]
+    )
   }
 }
 
