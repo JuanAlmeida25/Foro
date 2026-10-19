@@ -22,6 +22,21 @@
           <button
             class="btn sm"
             type="button"
+            @click="$emit('fijar-juicio', { aporteId: aporte.id, abierto: !aporte.juicio })"
+          >
+            ⚖️ {{ aporte.juicio ? 'Archivar juicio' : 'Abrir juicio' }}
+          </button>
+          <button
+            v-if="aporte.juicio"
+            class="btn sm"
+            type="button"
+            @click="abrirModalSentencia"
+          >
+            🔨 {{ aporte.juicio.veredicto ? 'Corregir sentencia' : 'Dictar sentencia' }}
+          </button>
+          <button
+            class="btn sm"
+            type="button"
             @click="$emit('iniciar-edicion', { aporte, clave: '' })"
           >
             ✏️ Editar (Admin)
@@ -94,6 +109,32 @@
         </span>
       </div>
 
+      <!-- El Juicio de Macondo: sala de audiencias y sentencia -->
+      <section v-if="aporte.juicio" class="juicio-card" aria-label="Juicio de Macondo">
+        <div class="juicio-head">
+          <span class="juicio-badge">⚖️ El Juicio de Macondo</span>
+          <span class="eyebrow">{{ aporte.juicio.veredicto ? 'Caso cerrado' : 'Audiencia en curso' }}</span>
+        </div>
+        <p v-if="!aporte.juicio.veredicto" class="juicio-intro">
+          Este aporte está en juicio. Al replicar, escoge bando: la Fiscalía acusa, la Defensa defiende
+          y los neutrales aportan pruebas. El instructor dictará sentencia al final.
+        </p>
+
+        <div class="juicio-bandos">
+          <span v-for="b in BANDOS_JUICIO" :key="b.id" :class="['juicio-conteo', b.id]">
+            {{ b.icono }} {{ b.nombre }}: <b>{{ conteoBandos[b.id] }}</b>
+          </span>
+        </div>
+
+        <div v-if="veredicto" :class="['juicio-sentencia', aporte.juicio.veredicto]">
+          <span class="juicio-sello">{{ veredicto.icono }} {{ veredicto.nombre }}</span>
+          <p class="juicio-texto">{{ aporte.juicio.sentencia }}</p>
+          <span v-if="aporte.juicio.sentenciado_at" class="eyebrow" style="font-size: 11px;">
+            Sentencia del {{ formatFecha(aporte.juicio.sentenciado_at) }} · no afecta la calificación
+          </span>
+        </div>
+      </section>
+
       <div class="post-question-block">
         <span class="forum-question-badge" style="font-size: 12px;">Pregunta Orientadora</span>
         <h3 class="post-question-title" style="color: var(--accent); font-size: 22px; line-height: 1.35; margin-top: 2px;">
@@ -101,7 +142,8 @@
         </h3>
         <div style="margin-top: 14px;">
           <span class="eyebrow" style="display: block; margin-bottom: 8px;">Respuesta y Desarrollo</span>
-          <p class="post-question-text">{{ aporte.respuesta }}</p>
+          <p class="post-question-text"><TextoConGlosario :texto="aporte.respuesta" /></p>
+          <span class="glosa-hint">Los términos subrayados tienen su definición del glosario: pasa el mouse o tócalos.</span>
         </div>
       </div>
 
@@ -158,6 +200,14 @@
               required
             ></textarea>
           </div>
+          <fieldset v-if="aporte.juicio && !aporte.juicio.veredicto" class="bando-picker">
+            <legend class="lbl">¿De qué lado estás en el juicio?</legend>
+            <label v-for="b in BANDOS_JUICIO" :key="b.id" :class="['bando-opcion', b.id, { activo: nuevoComentario.bando === b.id }]">
+              <input v-model="nuevoComentario.bando" type="radio" name="bando" :value="b.id" />
+              <span>{{ b.icono }} <b>{{ b.nombre }}</b></span>
+              <small>{{ b.ayuda }}</small>
+            </label>
+          </fieldset>
         </div>
 
         <div class="form-foot">
@@ -180,7 +230,12 @@
           class="comment-card"
         >
           <div class="comment-card-head">
-            <b>{{ c.autor }}</b>
+            <b>
+              {{ c.autor }}
+              <span v-if="bandoPorId(c.bando)" :class="['bando-tag', c.bando]">
+                {{ bandoPorId(c.bando).icono }} {{ bandoPorId(c.bando).nombre }}
+              </span>
+            </b>
             <div style="display: flex; gap: 10px; align-items: center;">
               <time>{{ formatFecha(c.created_at) }}</time>
               <button
@@ -198,7 +253,7 @@
           <blockquote v-if="c.comentario_citado" class="comment-quote">
             "{{ c.comentario_citado }}"
           </blockquote>
-          <p class="comment-text">{{ c.contenido }}</p>
+          <p class="comment-text"><TextoConGlosario :texto="c.contenido" /></p>
           <div class="reaction-row compact">
             <BotonUtil
               tipo="comentario"
@@ -219,6 +274,19 @@
         <p style="font-size: 14px; color: var(--muted);">
           Asigna una calificación numérica de 0 a 100 y una retroalimentación pedagógica para el aprendiz.
         </p>
+
+        <fieldset class="rubrica">
+          <legend class="lbl">Rúbrica (marca lo que cumple y la nota se suma sola)</legend>
+          <label v-for="c in CRITERIOS_RUBRICA" :key="c.id" class="rubrica-item">
+            <input
+              type="checkbox"
+              :checked="formCalificacion.criterios.includes(c.id)"
+              @change="alternarCriterio(c.id)"
+            />
+            <span>{{ c.texto }}</span>
+            <b>{{ c.puntos }}</b>
+          </label>
+        </fieldset>
 
         <div>
           <label class="lbl" for="calif-nota">Calificación (0 a 100)</label>
@@ -243,11 +311,65 @@
             rows="4"
             placeholder="Detalla aciertos técnicos, cumplimiento normativo y sugerencias de mejora..."
           ></textarea>
+          <div class="plantillas" role="group" aria-label="Retroalimentaciones frecuentes">
+            <button
+              v-for="p in PLANTILLAS_RETRO"
+              :key="p.id"
+              class="plantilla-chip"
+              type="button"
+              :title="p.texto"
+              @click="usarPlantilla(p.texto)"
+            >
+              {{ p.titulo }}
+            </button>
+          </div>
         </div>
 
         <div class="actions" style="justify-content: flex-end; margin-top: 10px;">
           <button class="btn sm" type="button" @click="mostrarModalCalificar = false">Cancelar</button>
           <button class="btn primary sm" type="button" @click="enviarCalificacion">Guardar Calificación</button>
+        </div>
+      </div>
+    </div>
+    </Transition>
+
+    <!-- MODAL: Dictar Sentencia del Juicio (Exclusivo Administrador) -->
+    <Transition name="modal">
+    <div v-if="mostrarModalSentencia" class="modal-backdrop" @click.self="mostrarModalSentencia = false">
+      <div class="modal-box">
+        <h3>🔨 Dictar sentencia</h3>
+        <p style="font-size: 14px; color: var(--muted);">
+          Escoge el veredicto y explica los argumentos. La sentencia no cambia la calificación de 0 a 100.
+        </p>
+
+        <fieldset class="bando-picker">
+          <legend class="lbl">Veredicto</legend>
+          <label
+            v-for="v in VEREDICTOS_JUICIO"
+            :key="v.id"
+            :class="['bando-opcion', v.id, { activo: formSentencia.veredicto === v.id }]"
+          >
+            <input v-model="formSentencia.veredicto" type="radio" name="veredicto" :value="v.id" />
+            <span>{{ v.icono }} <b>{{ v.nombre }}</b></span>
+            <small>{{ v.detalle }}</small>
+          </label>
+        </fieldset>
+
+        <div>
+          <label class="lbl" for="sentencia-texto">Argumentos de la sentencia</label>
+          <textarea
+            id="sentencia-texto"
+            v-model="formSentencia.sentencia"
+            class="inp"
+            rows="4"
+            maxlength="5000"
+            placeholder="Ej. La Defensa demostró que la GPL no obliga a publicar el código si el sistema solo corre en el servidor..."
+          ></textarea>
+        </div>
+
+        <div class="actions" style="justify-content: flex-end; margin-top: 10px;">
+          <button class="btn sm" type="button" @click="mostrarModalSentencia = false">Cancelar</button>
+          <button class="btn primary sm" type="button" @click="enviarSentencia">Dictar sentencia</button>
         </div>
       </div>
     </div>
@@ -288,10 +410,14 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { fmtDate } from '../utils/text.js'
 import { getAporteText } from '../utils/exporter.js'
+import { sumarRubrica, agregarPlantilla } from '../utils/rubrica.js'
+import { CRITERIOS_RUBRICA, PLANTILLAS_RETRO } from '../data/rubrica.js'
+import { BANDOS_JUICIO, VEREDICTOS_JUICIO, bandoPorId, veredictoPorId, contarBandos } from '../data/juicio.js'
 import BotonUtil from './BotonUtil.vue'
+import TextoConGlosario from './TextoConGlosario.vue'
 
 const props = defineProps({
   aporte: { type: Object, required: true },
@@ -306,6 +432,8 @@ const emit = defineEmits([
   'iniciar-edicion',
   'calificar-aporte',
   'reaccionar',
+  'fijar-juicio',
+  'dictar-sentencia',
   'toast'
 ])
 
@@ -315,15 +443,23 @@ const errorMsg = ref('')
 const nuevoComentario = reactive({
   autor: '',
   comentario_citado: '',
-  contenido: ''
+  contenido: '',
+  bando: 'neutral'
 })
+
+const conteoBandos = computed(() => contarBandos(props.aporte.comentarios))
+const veredicto = computed(() => veredictoPorId(props.aporte.juicio?.veredicto))
 
 // Estado de modales
 const mostrarModalCalificar = ref(false)
 const formCalificacion = reactive({
   nota: props.aporte.calificacion ?? 100,
-  retroalimentacion: props.aporte.retroalimentacion || ''
+  retroalimentacion: props.aporte.retroalimentacion || '',
+  criterios: []
 })
+
+const mostrarModalSentencia = ref(false)
+const formSentencia = reactive({ veredicto: '', sentencia: '' })
 
 const mostrarModalClave = ref(false)
 const accionPendiente = ref('') // 'editar' | 'eliminar'
@@ -343,7 +479,43 @@ function copiarTextoAporte() {
 function abrirModalCalificar() {
   formCalificacion.nota = props.aporte.calificacion ?? 100
   formCalificacion.retroalimentacion = props.aporte.retroalimentacion || ''
+  // La rúbrica arranca sin marcar: la nota guardada no dice qué criterios se cumplieron
+  formCalificacion.criterios = []
   mostrarModalCalificar.value = true
+}
+
+// Al marcar o desmarcar un criterio la nota se recalcula; después el profe la puede ajustar a mano
+function alternarCriterio(id) {
+  const criterios = formCalificacion.criterios
+  formCalificacion.criterios = criterios.includes(id) ? criterios.filter(c => c !== id) : [...criterios, id]
+  formCalificacion.nota = sumarRubrica(CRITERIOS_RUBRICA, formCalificacion.criterios)
+}
+
+function usarPlantilla(texto) {
+  formCalificacion.retroalimentacion = agregarPlantilla(formCalificacion.retroalimentacion, texto)
+}
+
+function abrirModalSentencia() {
+  formSentencia.veredicto = props.aporte.juicio?.veredicto || ''
+  formSentencia.sentencia = props.aporte.juicio?.sentencia || ''
+  mostrarModalSentencia.value = true
+}
+
+function enviarSentencia() {
+  if (!formSentencia.veredicto) {
+    alert('Escoge un veredicto')
+    return
+  }
+  if (!formSentencia.sentencia.trim()) {
+    alert('Escribe los argumentos de la sentencia')
+    return
+  }
+  emit('dictar-sentencia', {
+    aporteId: props.aporte.id,
+    veredicto: formSentencia.veredicto,
+    sentencia: formSentencia.sentencia.trim()
+  })
+  mostrarModalSentencia.value = false
 }
 
 function enviarCalificacion() {
@@ -403,7 +575,8 @@ async function enviarComentario() {
       aporteId: props.aporte.id,
       autor: nuevoComentario.autor.trim(),
       comentario_citado: nuevoComentario.comentario_citado.trim(),
-      contenido: nuevoComentario.contenido.trim()
+      contenido: nuevoComentario.contenido.trim(),
+      bando: props.aporte.juicio ? nuevoComentario.bando : ''
     })
 
     nuevoComentario.contenido = ''
@@ -413,3 +586,219 @@ async function enviarComentario() {
   }
 }
 </script>
+
+<style scoped>
+/* Con la rúbrica el modal de calificar crece: en pantallas bajitas se desplaza por dentro */
+.modal-box {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.glosa-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ----- Rúbrica y plantillas ----- */
+.rubrica {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rubrica-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: start;
+  font-size: 13.5px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.rubrica-item input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.rubrica-item b {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.plantillas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.plantilla-chip {
+  background: var(--sunk);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.plantilla-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ----- El Juicio de Macondo ----- */
+.juicio-card {
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--surface));
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.juicio-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.juicio-badge {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-family: var(--f-mono);
+  color: var(--accent);
+}
+
+.juicio-intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.juicio-bandos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.juicio-conteo,
+.bando-tag {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.bando-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+
+.fiscalia { --bando: var(--bad); }
+.defensa { --bando: var(--accent); }
+.neutral,
+.dividido { --bando: var(--muted); }
+
+.juicio-conteo,
+.bando-tag {
+  border-color: color-mix(in srgb, var(--bando, var(--line)) 45%, var(--surface));
+  color: var(--bando, var(--fg));
+}
+
+.juicio-sentencia {
+  border: 2px dashed var(--bando);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.juicio-sello {
+  align-self: flex-start;
+  font-family: var(--f-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--bando);
+  transform: rotate(-2deg);
+}
+
+.juicio-texto {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+/* Selector de bando (réplicas) y de veredicto (sentencia) */
+.bando-picker {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.bando-picker legend {
+  margin-bottom: 6px;
+}
+
+.bando-opcion {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13.5px;
+}
+
+.bando-opcion input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bando-opcion small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.bando-opcion b {
+  color: var(--bando);
+}
+
+.bando-opcion.activo {
+  border-color: var(--bando);
+  box-shadow: 0 0 0 1px var(--bando);
+}
+
+.bando-opcion:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+</style>

@@ -1,5 +1,6 @@
 // Licencias de software para la pestaña "⚖️ Licencias de Software" (src/components/LicenciasInfo.vue).
-// Cada licencia: { id, nombre, corto, spdx, categoria, resumen, permite, exige, limita, proyectos, ideal, tabla }
+// Cada licencia: { id, nombre, corto, spdx, categoria, resumen, permite, exige, limita, proyectos, ideal, abuela, tabla }
+// - abuela: la misma licencia explicada "como si tuviera 80 años", con comparaciones de cocina costeña.
 // - categoria es el id de una de CATEGORIAS_LICENCIA.
 // - tabla tiene un valor por cada columna de COLUMNAS_TABLA.
 // - Las reglas de compatibilidad usan los mismos valores que la tabla: yes, cond o no.
@@ -71,6 +72,7 @@ export const LICENCIAS = [
     limita: ['Sin garantía ni responsabilidad del autor', 'No otorga licencia de patentes de forma explícita'],
     proyectos: 'React, Vue.js, Node.js, jQuery, .NET, Ruby on Rails',
     ideal: 'Librerías y proyectos que buscan la máxima adopción.',
+    abuela: 'Es como la receta del bollo limpio que regala la vecina: haz con ella lo que quieras, hasta venderlo en la esquina, pero di que la receta es de ella. Y si se te quema, la vecina no responde.',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'yes', patentes: 'cond', revelar: 'yes', misma: 'yes', red: 'yes' }
   },
   {
@@ -85,6 +87,7 @@ export const LICENCIAS = [
     limita: ['No permite usar las marcas registradas del proyecto', 'Sin garantía ni responsabilidad'],
     proyectos: 'Kubernetes, Android (AOSP), TypeScript, Swift, Apache HTTP Server',
     ideal: 'Proyectos empresariales donde importa la protección frente a patentes.',
+    abuela: 'Igualita a la MIT, pero con abogado incluido: la vecina te regala la receta y te firma que no te va a demandar por ella (eso son las patentes). Eso sí, si tú la demandas a ella, se acaba el permiso. Y no puedes vender tu bollo como «Bollos de la Vecina».',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'yes', patentes: 'yes', revelar: 'yes', misma: 'yes', red: 'yes' }
   },
   {
@@ -99,6 +102,7 @@ export const LICENCIAS = [
     limita: ['No usar el nombre del autor para promoción (3-Clause)', 'Sin garantía ni responsabilidad'],
     proyectos: 'FreeBSD, Django, Flask, lenguaje Go',
     ideal: 'Proyectos académicos o que quieren proteger su nombre.',
+    abuela: 'Prima hermana de la MIT: usa la receta como quieras y di de quién es, pero no pongas la foto de la vecina en tu letrero para vender más sin pedirle permiso.',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'yes', patentes: 'cond', revelar: 'yes', misma: 'yes', red: 'yes' }
   },
   {
@@ -113,6 +117,7 @@ export const LICENCIAS = [
     limita: ['No se puede integrar en software propietario distribuido', 'Sin garantía ni responsabilidad'],
     proyectos: 'Linux (GPL v2), GIMP, Bash, WordPress (GPL v2+), GCC',
     ideal: 'Proyectos que quieren garantizar que toda mejora siga siendo libre.',
+    abuela: 'Es como la receta del arroz de coco de la abuela: la puedes usar y mejorar, pero si repartes tu versión mejorada tienes que pasar la receta completa con la misma condición. Aquí no hay secretos de cocina.',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'cond', patentes: 'yes', revelar: 'no', misma: 'no', red: 'yes' }
   },
   {
@@ -127,6 +132,7 @@ export const LICENCIAS = [
     limita: ['El copyleft aplica a la librería, no a tu aplicación', 'Sin garantía ni responsabilidad'],
     proyectos: 'GNU C Library (glibc), FFmpeg, Qt (también con licencia comercial)',
     ideal: 'Librerías que quieren ser usadas por todos sin perder las mejoras.',
+    abuela: 'Es como el suero costeño que compras hecho: lo echas en tu plato y vendes el plato con tu receta secreta. Pero si le cambias algo al suero, la receta de ese suero sí la tienes que compartir.',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'cond', patentes: 'yes', revelar: 'cond', misma: 'cond', red: 'yes' }
   },
   {
@@ -141,6 +147,7 @@ export const LICENCIAS = [
     limita: ['No permite usar las marcas registradas', 'Sin garantía ni responsabilidad'],
     proyectos: 'Firefox, Thunderbird, LibreOffice (MPL 2.0)',
     ideal: 'Un punto medio entre permisiva y GPL.',
+    abuela: 'Va olla por olla: si le cambias algo a la olla del arroz de la abuela, esa olla la compartes; las otras ollas, con tus recetas, siguen siendo tuyas.',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'cond', patentes: 'yes', revelar: 'cond', misma: 'cond', red: 'yes' }
   },
   {
@@ -155,6 +162,7 @@ export const LICENCIAS = [
     limita: ['Muy restrictiva para servicios web propietarios', 'Muchas empresas prohíben usar dependencias AGPL'],
     proyectos: 'Mastodon, Nextcloud, Grafana',
     ideal: 'Aplicaciones web que no quieren ser aprovechadas como SaaS cerrado.',
+    abuela: 'Como la GPL, pero también pa\' los restaurantes: aunque no regales la receta y solo vendas los platos en tu restaurante (la web), el que se los come tiene derecho a pedirte la receta.',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'cond', patentes: 'yes', revelar: 'no', misma: 'no', red: 'no' }
   },
   {
@@ -169,6 +177,7 @@ export const LICENCIAS = [
     limita: ['Sin garantía ni responsabilidad', 'No otorga licencia de patentes explícita'],
     proyectos: 'youtube-dl / yt-dlp (Unlicense), muchos snippets y datasets (CC0)',
     ideal: 'Ejemplos, plantillas y código que quieres regalar sin condiciones.',
+    abuela: 'La abuela tira la receta por la ventana pa\' que la recoja el que quiera: no pide nada, ni siquiera que digan que es de ella. Aunque aquí en Colombia la receta siempre va a ser de la abuela (derechos morales), así no la cobre.',
     tabla: { comercial: 'yes', modificar: 'yes', distribuir: 'yes', patentes: 'cond', revelar: 'yes', misma: 'yes', red: 'yes' }
   },
   {
@@ -183,6 +192,7 @@ export const LICENCIAS = [
     limita: ['Prohíbe copiar, modificar o redistribuir', 'Suele prohibir la ingeniería inversa', 'No da acceso al código fuente'],
     proyectos: 'Windows, Microsoft Office, Adobe Creative Cloud, AutoCAD',
     ideal: 'Productos comerciales donde el código es el activo del negocio.',
+    abuela: 'Es como alquilar la casa de playa: la usas con las reglas del dueño (cuánta gente, cuántos días), pero no puedes tumbar paredes, ni sacarle copia a la llave, ni subarrendarla. La casa nunca es tuya.',
     tabla: { comercial: 'cond', modificar: 'no', distribuir: 'no', patentes: 'no', revelar: 'yes', misma: 'yes', red: 'yes' }
   }
 ]

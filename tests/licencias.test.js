@@ -26,7 +26,7 @@ test('Licencias: ids únicos, campos obligatorios y categoría existente', () =>
 
   const categorias = new Set(CATEGORIAS_LICENCIA.map(c => c.id))
   for (const l of LICENCIAS) {
-    for (const campo of ['id', 'nombre', 'corto', 'spdx', 'resumen', 'proyectos', 'ideal']) {
+    for (const campo of ['id', 'nombre', 'corto', 'spdx', 'resumen', 'proyectos', 'ideal', 'abuela']) {
       assert.ok(textoNoVacio(l[campo]), `${l.id}: falta "${campo}"`)
     }
     for (const lista of ['permite', 'exige', 'limita']) {

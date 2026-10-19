@@ -114,13 +114,14 @@ export function ipDeLaPeticion(req) {
   return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'desconocida'
 }
 
-export async function demasiadosIntentos(db, ip, objetivo) {
+// "maximo" permite otros límites con la misma tabla, p. ej. para las reacciones (server/reacciones.js)
+export async function demasiadosIntentos(db, ip, objetivo, maximo = MAX_INTENTOS) {
   const desde = new Date(Date.now() - VENTANA_MS).toISOString()
   const fila = await db.get(
     'SELECT CAST(COUNT(*) AS INTEGER) AS n FROM intentos_fallidos WHERE ip = ? AND objetivo = ? AND created_at > ?',
     [ip, objetivo, desde]
   )
-  return fila.n >= MAX_INTENTOS
+  return fila.n >= maximo
 }
 
 export async function registrarFallo(db, ip, objetivo) {

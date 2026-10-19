@@ -112,6 +112,18 @@
 
           <p class="lic-resumen">{{ lic.resumen }}</p>
 
+          <button
+            class="btn ghost sm abuela-btn"
+            type="button"
+            :aria-expanded="abuelaAbierta.has(lic.id)"
+            @click="alternarAbuela(lic.id)"
+          >
+            👵 {{ abuelaAbierta.has(lic.id) ? 'Ya entendí, mija' : 'Explícamelo como si tuviera 80 años' }}
+          </button>
+          <Transition name="abuela">
+            <p v-if="abuelaAbierta.has(lic.id)" class="lic-abuela">{{ lic.abuela }}</p>
+          </Transition>
+
           <div class="lic-columns">
             <div>
               <b class="col-title ok">Permite</b>
@@ -298,6 +310,14 @@ const filtros = [
 ]
 
 const filtro = ref('todas')
+
+// Licencias con la explicación de la abuela abierta (cada tarjeta se abre por su cuenta)
+const abuelaAbierta = reactive(new Set())
+
+function alternarAbuela(id) {
+  if (abuelaAbierta.has(id)) abuelaAbierta.delete(id)
+  else abuelaAbierta.add(id)
+}
 
 const preguntasAsistente = [
   {
@@ -683,6 +703,39 @@ function textoMarca(tipo) {
   color: var(--fg);
   line-height: 1.55;
   margin: 0;
+}
+
+.abuela-btn {
+  align-self: flex-start;
+}
+
+.lic-abuela {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fg);
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+}
+
+.abuela-enter-active,
+.abuela-leave-active {
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.abuela-enter-from,
+.abuela-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abuela-enter-active,
+  .abuela-leave-active {
+    transition: none;
+  }
 }
 
 .lic-columns {

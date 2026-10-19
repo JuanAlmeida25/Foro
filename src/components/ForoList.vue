@@ -109,6 +109,15 @@
                 >
                   ⭐ {{ a.calificacion }}/100
                 </span>
+                <span
+                  v-if="Number(a.en_juicio)"
+                  class="pill"
+                  :data-tone="a.juicio_veredicto ? 'ok' : 'warn'"
+                  style="padding: 3px 8px; font-size: 11px; font-weight: 600;"
+                  :title="a.juicio_veredicto ? 'Juicio con sentencia' : 'Aporte en juicio: escoge bando al replicar'"
+                >
+                  ⚖️ {{ a.juicio_veredicto ? 'Sentenciado' : 'En juicio' }}
+                </span>
                 <span class="badge-util" title="Marcas de «Útil»">
                   👍 {{ Number(a.total_reacciones) || 0 }}
                 </span>

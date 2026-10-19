@@ -58,6 +58,14 @@
           >
             🎯 Actividad de Repaso
           </button>
+          <button
+            v-if="isAdmin"
+            :class="['nav-tab', { active: currentTab === 'panel' }]"
+            type="button"
+            @click="currentTab = 'panel'"
+          >
+            👨‍🏫 Panel del Profe
+          </button>
         </nav>
 
         <div class="actions" style="align-items: center;">
@@ -126,6 +134,8 @@
           @eliminar-aporte="handleEliminarAporte"
           @iniciar-edicion="handleIniciarEdicion"
           @calificar-aporte="handleCalificarAporte"
+          @fijar-juicio="handleFijarJuicio"
+          @dictar-sentencia="handleDictarSentencia"
           @toast="toast"
         />
       </section>
@@ -337,6 +347,11 @@
       <section v-else-if="currentTab === 'repaso'">
         <ActividadRepaso />
       </section>
+
+      <!-- VISTA: PANEL DEL PROFE (solo administrador) -->
+      <section v-else-if="currentTab === 'panel' && isAdmin">
+        <PanelProfe @ver-aporte="abrirDetalleAporte" @toast="toast" />
+      </section>
       </Transition>
     </main>
 
@@ -415,7 +430,9 @@ import {
   EVENTO_SESION_VENCIDA,
   verifyClaveAporte,
   calificarAporte,
-  toggleReaccion,
+  fijarJuicio,
+  dictarSentencia,
+  fijarReaccion,
   addComentario,
   deleteComentario
 } from './services/api.js'
@@ -424,9 +441,10 @@ import {
 const ActividadRepaso = defineAsyncComponent(() => import('./components/ActividadRepaso.vue'))
 const LicenciasInfo = defineAsyncComponent(() => import('./components/LicenciasInfo.vue'))
 const GlosarioInfo = defineAsyncComponent(() => import('./components/GlosarioInfo.vue'))
+const PanelProfe = defineAsyncComponent(() => import('./components/PanelProfe.vue'))
 
 // Estado de navegación y administración
-const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'licencias' | 'glosario' | 'repaso'
+const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'licencias' | 'glosario' | 'repaso' | 'panel'
 const aportesList = ref([])
 const aporteSeleccionado = ref(null)
 const cargandoAportes = ref(false)
@@ -463,6 +481,7 @@ const pillTone = computed(() => {
   if (currentTab.value === 'licencias') return 'ok'
   if (currentTab.value === 'glosario') return 'ok'
   if (currentTab.value === 'repaso') return 'ok'
+  if (currentTab.value === 'panel') return 'ok'
   if (publicando.value) return 'busy'
   if (state.aporteIdPublicado) return 'ok'
   return 'warn'
@@ -473,6 +492,7 @@ const pillText = computed(() => {
   if (currentTab.value === 'licencias') return 'Guía de licencias'
   if (currentTab.value === 'glosario') return 'Glosario'
   if (currentTab.value === 'repaso') return 'Práctica de repaso'
+  if (currentTab.value === 'panel') return 'Panel del Profe'
   if (publicando.value) return 'Sincronizando con el servidor…'
   if (state.aporteIdPublicado) return 'Modo Edición / Publicado'
   return 'Borrador local'
@@ -585,6 +605,7 @@ async function verificarAdminLogin() {
 
 function cerrarSesionAdmin() {
   isAdmin.value = false
+  if (currentTab.value === 'panel') currentTab.value = 'foro'
   clearAdminToken()
   toast('Sesión de Administrador cerrada')
 }
@@ -593,6 +614,7 @@ function cerrarSesionAdmin() {
 function onSesionVencida() {
   if (isAdmin.value) {
     isAdmin.value = false
+    if (currentTab.value === 'panel') currentTab.value = 'foro'
     toast('Tu sesión de administrador venció. Vuelve a ingresar.')
   }
 }
@@ -659,13 +681,38 @@ async function handleCalificarAporte({ aporteId, calificacion, retroalimentacion
   }
 }
 
+/* ----- El Juicio de Macondo (Admin) ----- */
+async function handleFijarJuicio({ aporteId, abierto }) {
+  if (!abierto && !confirm('¿Archivar el juicio? El aporte vuelve a ser normal y se oculta la sentencia.')) return
+  try {
+    const { juicio } = await fijarJuicio(aporteId, abierto)
+    aporteSeleccionado.value = { ...aporteSeleccionado.value, juicio }
+    await cargarForo()
+    toast(abierto ? '⚖️ ¡Se abre la audiencia! Que pasen las partes.' : 'Juicio archivado')
+  } catch (err) {
+    alert(err.message || 'No se pudo cambiar el juicio')
+  }
+}
+
+async function handleDictarSentencia({ aporteId, veredicto, sentencia }) {
+  try {
+    const { juicio } = await dictarSentencia(aporteId, { veredicto, sentencia })
+    aporteSeleccionado.value = { ...aporteSeleccionado.value, juicio }
+    await cargarForo()
+    toast('🔨 Sentencia dictada. ¡Se levanta la sesión!')
+  } catch (err) {
+    alert(err.message || 'No se pudo dictar la sentencia')
+  }
+}
+
 /* ----- Comentarios y Eliminación ----- */
 async function handleNuevoComentario(datosComentario) {
   try {
     const nuevo = await addComentario(datosComentario.aporteId, {
       autor: datosComentario.autor,
       comentario_citado: datosComentario.comentario_citado,
-      contenido: datosComentario.contenido
+      contenido: datosComentario.contenido,
+      bando: datosComentario.bando
     })
 
     if (!aporteSeleccionado.value.comentarios) {
@@ -707,7 +754,7 @@ async function handleReaccion({ tipo, id }) {
   fijarTotalReacciones(tipo, id, t => Math.max(0, (Number(t) || 0) + (previo ? -1 : 1)))
 
   try {
-    const { reaccionado, total } = await toggleReaccion(tipo, id)
+    const { reaccionado, total } = await fijarReaccion(tipo, id, !previo)
     marcarReaccion(tipo, id, reaccionado)
     fijarTotalReacciones(tipo, id, () => total)
   } catch (error) {

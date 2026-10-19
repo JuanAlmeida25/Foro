@@ -108,3 +108,64 @@ export function resaltar(texto, consulta) {
 export function inicial(termino) {
   return normalizar(termino).charAt(0).toUpperCase()
 }
+
+// Sinónimos tan comunes que subrayarlos en cada aporte sería puro ruido
+// ("programa", "licencia", "garantía"…). En la pestaña Glosario sí se pueden buscar.
+const DEMASIADO_COMUNES = new Set([
+  'programa', 'aplicacion', 'licencia', 'licenciamiento', 'fuentes', 'binario', 'ejecutable',
+  'gratis', 'trial', 'permisiva', 'paternidad', 'nube', 'paquete', 'libreria', 'biblioteca',
+  'garantia', 'responsabilidad', 'tal cual', 'reconocimiento', 'suscripcion', 'patentes',
+  'enlazar', 'crack', 'pirateria', 'redistribuir', 'incompatibilidad', 'distribucion', 'notice'
+])
+
+const LETRA_O_NUMERO = /[\p{L}\p{N}]/u
+
+// Nombres (término y sinónimos) que se buscan dentro de un texto, los más largos primero
+// para que "Software libre" gane sobre "Software" y "GPL v3" sobre "GPL".
+function nombresParaMarcar(terminos) {
+  const nombres = []
+  for (const t of terminos) {
+    for (const nombre of [t.termino, ...(t.sinonimos || [])]) {
+      const n = normalizar(nombre)
+      if (n.length >= 3 && !DEMASIADO_COMUNES.has(n)) nombres.push({ n, t })
+    }
+  }
+  return nombres.sort((a, b) => b.n.length - a.n.length)
+}
+
+// Parte un texto libre (un aporte, una réplica) en segmentos y marca los términos del glosario
+// que aparecen como palabra completa. Cada término se marca solo la primera vez, para que el
+// texto no quede subrayado de punta a punta. Se pinta en la plantilla, sin v-html.
+// Devuelve [{ texto, termino? }], donde termino es el objeto del glosario.
+export function marcarTerminos(texto, terminos) {
+  const original = String(texto ?? '')
+  if (!original) return [{ texto: original }]
+
+  // Igual que en resaltar(): si el texto cambia de largo al normalizarlo, se deja tal cual
+  const plano = sinAcentos(original).toLowerCase()
+  if (plano.length !== original.length) return [{ texto: original }]
+
+  const nombres = nombresParaMarcar(terminos)
+  const yaMarcados = new Set()
+  const segmentos = []
+  let desde = 0
+
+  for (let i = 0; i < plano.length; i++) {
+    if (i > 0 && LETRA_O_NUMERO.test(plano[i - 1])) continue
+    const hallado = nombres.find(({ n, t }) =>
+      !yaMarcados.has(t.id) &&
+      plano.startsWith(n, i) &&
+      !LETRA_O_NUMERO.test(plano[i + n.length] ?? '')
+    )
+    if (!hallado) continue
+
+    if (i > desde) segmentos.push({ texto: original.slice(desde, i) })
+    segmentos.push({ texto: original.slice(i, i + hallado.n.length), termino: hallado.t })
+    yaMarcados.add(hallado.t.id)
+    desde = i + hallado.n.length
+    i = desde - 1
+  }
+
+  if (desde < original.length) segmentos.push({ texto: original.slice(desde) })
+  return segmentos
+}

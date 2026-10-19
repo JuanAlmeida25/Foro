@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { TERMINOS, CATEGORIAS_GLOSARIO } from '../src/data/glosario.js'
-import { normalizar, buscarTerminos, sugerencias, resaltar, distancia, inicial } from '../src/utils/glosario.js'
+import { normalizar, buscarTerminos, sugerencias, resaltar, distancia, inicial, marcarTerminos } from '../src/utils/glosario.js'
 
 test('Datos del glosario: ids únicos, categorías válidas y relacionados existentes', () => {
   const ids = TERMINOS.map(t => t.id)
@@ -126,4 +126,46 @@ test('resaltar con ñ marca exactamente la palabra en el texto original', () => 
     { texto: 'Señal de ', marca: false },
     { texto: 'código', marca: true }
   ])
+})
+
+/* ----- Glosario automático dentro de los aportes ----- */
+
+const marcados = segmentos => segmentos.filter(s => s.termino).map(s => [s.texto, s.termino.id])
+const unir = segmentos => segmentos.map(s => s.texto).join('')
+
+test('marcarTerminos encuentra términos sin importar tildes ni mayúsculas', () => {
+  const texto = 'Elegí apache 2.0 porque el COPYLEFT de la Ley 23 de 1982 me asustó.'
+  const segmentos = marcarTerminos(texto, TERMINOS)
+  assert.equal(unir(segmentos), texto, 'El texto original no se puede alterar')
+  assert.deepEqual(marcados(segmentos), [
+    ['apache 2.0', 'apache'],
+    ['COPYLEFT', 'copyleft'],
+    ['Ley 23 de 1982', 'ley-23']
+  ])
+})
+
+test('marcarTerminos prefiere el nombre más largo y respeta palabras completas', () => {
+  const segmentos = marcarTerminos('El software libre no es lo mismo que LGPL ni que AGPL.', TERMINOS)
+  const textos = marcados(segmentos).map(([t]) => t)
+  assert.ok(textos.includes('software libre'), '"software libre" gana sobre "software"')
+  assert.ok(!textos.includes('software'), 'No marca "software" suelto dentro de "software libre"')
+  assert.ok(textos.includes('LGPL') && textos.includes('AGPL'))
+  assert.ok(!textos.includes('GPL'), '"GPL" no se marca dentro de "LGPL" ni de "AGPL"')
+})
+
+test('marcarTerminos marca cada término solo la primera vez', () => {
+  const segmentos = marcarTerminos('MIT por aquí, MIT por allá y otra vez MIT.', TERMINOS)
+  assert.equal(marcados(segmentos).length, 1)
+})
+
+test('marcarTerminos ignora los sinónimos demasiado comunes', () => {
+  const segmentos = marcarTerminos('Este programa tiene licencia y garantía.', TERMINOS)
+  assert.deepEqual(marcados(segmentos), [])
+})
+
+test('marcarTerminos aguanta textos vacíos o raros sin romperse', () => {
+  assert.deepEqual(marcarTerminos('', TERMINOS), [{ texto: '' }])
+  assert.deepEqual(marcarTerminos(null, TERMINOS), [{ texto: '' }])
+  const descompuesto = 'Código fuente'
+  assert.equal(unir(marcarTerminos(descompuesto, TERMINOS)), descompuesto)
 })
