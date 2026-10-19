@@ -5,17 +5,20 @@
 // - Sin esas variables, en local, usa el archivo SQLite server/foro.db como siempre.
 //
 // Las rutas escriben SQL con marcadores "?" y esta capa los adapta a cada motor.
+// Ambos adaptadores ofrecen all, get, run y transaction(fn): fn recibe un adaptador con all, get
+// y run que trabaja dentro de la transacción; si fn lanza un error se deshace todo (ROLLBACK).
 
 import { buildSeed, SEED_APORTE_ID } from './seed.js'
 import { hashClave } from './seguridad.js'
 import { SCHEMA_REACCIONES } from './reacciones.js'
+import { SCHEMA_JUICIO } from './juicio.js'
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
 
 export const dbEngine = connectionString ? 'postgres' : 'sqlite'
 
 // Tabla para limitar los intentos de clave incorrectos (igual en SQLite y Postgres)
-const SCHEMA_SEGURIDAD = `
+export const SCHEMA_SEGURIDAD = `
   CREATE TABLE IF NOT EXISTS intentos_fallidos (
     ip TEXT NOT NULL,
     objetivo TEXT NOT NULL,
@@ -50,13 +53,31 @@ const SCHEMA_POSTGRES = `
   );
 
   CREATE INDEX IF NOT EXISTS comentarios_aporte_id_idx ON comentarios (aporte_id);
-` + SCHEMA_SEGURIDAD + SCHEMA_REACCIONES
+` + SCHEMA_SEGURIDAD + SCHEMA_REACCIONES + SCHEMA_JUICIO
 
 // Convierte "SELECT ... WHERE id = ?" en "SELECT ... WHERE id = $1" para Postgres.
 // Los valores siempre viajan como parámetros, nunca dentro del texto SQL.
 function toPostgresParams(sql) {
   let i = 0
   return sql.replace(/\?/g, () => '$' + ++i)
+}
+
+// all, get y run sobre el pool o sobre un cliente concreto (ambos tienen .query)
+function consultasPostgres(conexion) {
+  return {
+    async all(sql, params = []) {
+      const { rows } = await conexion.query(toPostgresParams(sql), params)
+      return rows
+    },
+    async get(sql, params = []) {
+      const { rows } = await conexion.query(toPostgresParams(sql), params)
+      return rows[0]
+    },
+    async run(sql, params = []) {
+      const result = await conexion.query(toPostgresParams(sql), params)
+      return { changes: result.rowCount }
+    }
+  }
 }
 
 async function createPostgresAdapter() {
@@ -76,17 +97,21 @@ async function createPostgresAdapter() {
   }
 
   const adaptador = {
-    async all(sql, params = []) {
-      const { rows } = await pool.query(toPostgresParams(sql), params)
-      return rows
-    },
-    async get(sql, params = []) {
-      const { rows } = await pool.query(toPostgresParams(sql), params)
-      return rows[0]
-    },
-    async run(sql, params = []) {
-      const result = await pool.query(toPostgresParams(sql), params)
-      return { changes: result.rowCount }
+    ...consultasPostgres(pool),
+    // Las sentencias de una transacción deben ir por la misma conexión, así que se reserva una del pool
+    async transaction(fn) {
+      const client = await pool.connect()
+      try {
+        await client.query('BEGIN')
+        const resultado = await fn(consultasPostgres(client))
+        await client.query('COMMIT')
+        return resultado
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {})
+        throw error
+      } finally {
+        client.release()
+      }
     }
   }
 
@@ -142,6 +167,57 @@ async function prepararPostgres(pool) {
   }
 }
 
+// Adaptador sobre una base SQLite ya abierta (node:sqlite). Se exporta para las pruebas,
+// que lo usan con una base en memoria.
+export function crearAdaptadorSqlite(db) {
+  const consultas = {
+    async all(sql, params = []) {
+      return db.prepare(sql).all(...params)
+    },
+    async get(sql, params = []) {
+      return db.prepare(sql).get(...params)
+    },
+    async run(sql, params = []) {
+      const result = db.prepare(sql).run(...params)
+      return { changes: Number(result.changes) }
+    }
+  }
+
+  // SQLite usa una sola conexión para todas las peticiones. Mientras hay una transacción abierta,
+  // las demás consultas y transacciones esperan su turno para no quedar mezcladas dentro de ella.
+  let turno = Promise.resolve()
+
+  return {
+    async all(sql, params) {
+      await turno
+      return consultas.all(sql, params)
+    },
+    async get(sql, params) {
+      await turno
+      return consultas.get(sql, params)
+    },
+    async run(sql, params) {
+      await turno
+      return consultas.run(sql, params)
+    },
+    transaction(fn) {
+      const resultado = turno.then(async () => {
+        db.exec('BEGIN')
+        try {
+          const valor = await fn(consultas)
+          db.exec('COMMIT')
+          return valor
+        } catch (error) {
+          db.exec('ROLLBACK')
+          throw error
+        }
+      })
+      turno = resultado.catch(() => {})
+      return resultado
+    }
+  }
+}
+
 async function createSqliteAdapter() {
   if (process.env.VERCEL) {
     // En Vercel el disco no guarda cambios: sin Postgres los datos se perderían.
@@ -155,20 +231,9 @@ async function createSqliteAdapter() {
   const { db } = await import('./db.js')
   db.exec(SCHEMA_SEGURIDAD)
   db.exec(SCHEMA_REACCIONES)
+  db.exec(SCHEMA_JUICIO)
 
-  const adaptador = {
-    async all(sql, params = []) {
-      return db.prepare(sql).all(...params)
-    },
-    async get(sql, params = []) {
-      return db.prepare(sql).get(...params)
-    },
-    async run(sql, params = []) {
-      const result = db.prepare(sql).run(...params)
-      return { changes: Number(result.changes) }
-    }
-  }
-
+  const adaptador = crearAdaptadorSqlite(db)
   await migrarSeguridad(adaptador)
   return adaptador
 }

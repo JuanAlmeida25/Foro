@@ -1,13 +1,18 @@
 // Reacciones "👍 Útil" sobre aportes y comentarios.
 //
-// No hay cuentas de usuario: cada navegador envía un identificador anónimo que el servidor
-// guarda cifrado (SHA-256), y la clave primaria impide reaccionar dos veces a lo mismo.
+// No hay cuentas de usuario: cada navegador envía un identificador anónimo (un UUID) del que el
+// servidor solo guarda el hash SHA-256, y la clave primaria impide reaccionar dos veces a lo mismo.
 
 import crypto from 'node:crypto'
 
 export const TIPOS_REACCION = ['aporte', 'comentario']
-export const LONGITUD_MINIMA_VOTANTE = 16
-export const LONGITUD_MAXIMA_VOTANTE = 64
+
+// Formato de crypto.randomUUID(), que es lo que genera el navegador (src/services/reacciones.js)
+const PATRON_VOTANTE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Máximo de reacciones por persona (IP) en la ventana de 15 minutos de server/seguridad.js
+export const MAX_REACCIONES_POR_IP = 120
+export const OBJETIVO_LIMITE_REACCIONES = 'reacciones'
 
 // Tabla igual en SQLite y Postgres
 export const SCHEMA_REACCIONES = `
@@ -20,20 +25,23 @@ export const SCHEMA_REACCIONES = `
   );
 `
 
-// Subconsultas para sumar las reacciones a los listados
-export const SQL_TOTAL_REACCIONES_APORTE = (columnaId) =>
-  `(SELECT CAST(COUNT(*) AS INTEGER) FROM reacciones r WHERE r.tipo = 'aporte' AND r.objetivo_id = ${columnaId})`
-export const SQL_TOTAL_REACCIONES_COMENTARIO = (columnaId) =>
-  `(SELECT CAST(COUNT(*) AS INTEGER) FROM reacciones r WHERE r.tipo = 'comentario' AND r.objetivo_id = ${columnaId})`
-
-export function votanteValido(votante) {
-  return typeof votante === 'string' &&
-    votante.length >= LONGITUD_MINIMA_VOTANTE &&
-    votante.length <= LONGITUD_MAXIMA_VOTANTE
+// Subconsulta para sumar las reacciones a los listados, p. ej. sqlTotalReacciones('aporte', 'a.id').
+// Ambos valores se escriben dentro del SQL, así que solo se aceptan valores conocidos.
+export function sqlTotalReacciones(tipo, columnaId) {
+  if (!TIPOS_REACCION.includes(tipo)) throw new Error(`Tipo de reacción no válido: ${tipo}`)
+  if (typeof columnaId !== 'string' || !/^[a-z_.]+$/.test(columnaId)) {
+    throw new Error(`Columna no válida: ${columnaId}`)
+  }
+  return `(SELECT CAST(COUNT(*) AS INTEGER) FROM reacciones r WHERE r.tipo = '${tipo}' AND r.objetivo_id = ${columnaId})`
 }
 
-export function cifrarVotante(votante) {
-  return crypto.createHash('sha256').update(votante).digest('hex')
+export function votanteValido(votante) {
+  return typeof votante === 'string' && PATRON_VOTANTE.test(votante)
+}
+
+export function hashVotante(votante) {
+  // Se normaliza a minúsculas para que el mismo UUID cuente siempre igual
+  return crypto.createHash('sha256').update(votante.toLowerCase()).digest('hex')
 }
 
 // ¿Existe el aporte o comentario al que se quiere reaccionar?
@@ -50,22 +58,23 @@ export async function contarReacciones(db, tipo, id) {
   return Number(fila?.total) || 0
 }
 
-// Pone o quita la reacción de este votante. Devuelve { reaccionado, total }.
-export async function alternarReaccion(db, tipo, id, votante) {
-  const hash = cifrarVotante(votante)
-  const borrado = await db.run(
-    'DELETE FROM reacciones WHERE tipo = ? AND objetivo_id = ? AND votante = ?',
-    [tipo, id, hash]
-  )
-  const reaccionado = borrado.changes === 0
-  if (reaccionado) {
+// Deja la reacción de este votante en el estado pedido (true = puesta, false = quitada).
+// Repetir la misma petición no cambia nada. Devuelve { reaccionado, total }.
+export async function fijarReaccion(db, tipo, id, votante, reaccionar) {
+  const hash = hashVotante(votante)
+  if (reaccionar) {
     await db.run(
       `INSERT INTO reacciones (tipo, objetivo_id, votante, created_at) VALUES (?, ?, ?, ?)
        ON CONFLICT DO NOTHING`,
       [tipo, id, hash, new Date().toISOString()]
     )
+  } else {
+    await db.run(
+      'DELETE FROM reacciones WHERE tipo = ? AND objetivo_id = ? AND votante = ?',
+      [tipo, id, hash]
+    )
   }
-  return { reaccionado, total: await contarReacciones(db, tipo, id) }
+  return { reaccionado: reaccionar, total: await contarReacciones(db, tipo, id) }
 }
 
 // Borra las reacciones de un aporte y de todos sus comentarios (antes de eliminarlos)

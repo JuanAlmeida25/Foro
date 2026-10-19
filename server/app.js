@@ -18,14 +18,27 @@ import {
 } from './seguridad.js'
 import {
   TIPOS_REACCION,
-  SQL_TOTAL_REACCIONES_APORTE,
-  SQL_TOTAL_REACCIONES_COMENTARIO,
+  MAX_REACCIONES_POR_IP,
+  OBJETIVO_LIMITE_REACCIONES,
+  sqlTotalReacciones,
   votanteValido,
   objetivoExiste,
-  alternarReaccion,
+  fijarReaccion,
   borrarReaccionesDeAporte,
   borrarReaccionesDeComentario
 } from './reacciones.js'
+import {
+  BANDOS,
+  VEREDICTOS,
+  MAX_SENTENCIA,
+  obtenerJuicio,
+  abrirJuicio,
+  archivarJuicio,
+  dictarSentencia,
+  guardarBando,
+  borrarJuicioDeAporte,
+  borrarBandoDeComentario
+} from './juicio.js'
 
 const app = express()
 
@@ -34,10 +47,11 @@ const app = express()
 app.disable('x-powered-by')
 app.use(express.json({ limit: '200kb' }))
 
-// Conectar con la base de datos antes de atender cualquier ruta de la API
+// Conectar con la base de datos antes de atender cualquier ruta de la API.
+// Las pruebas pueden usar otra base con app.set('obtenerDb', () => adaptador).
 app.use('/api', async (req, res, next) => {
   try {
-    req.db = await getDb()
+    req.db = await (req.app.get('obtenerDb') || getDb)()
     next()
   } catch (error) {
     console.error('Error al conectar con la base de datos:', error)
@@ -129,7 +143,7 @@ async function autorizarSobreAporte(req, res, id, clave, mensajeDenegado) {
 const COLUMNAS_APORTE = `
   id, autor, ficha, pregunta, respuesta, calificacion, retroalimentacion, calificado_at, created_at, updated_at,
   (CASE WHEN clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave,
-  ${SQL_TOTAL_REACCIONES_APORTE('aportes.id')} as total_reacciones
+  ${sqlTotalReacciones('aporte', 'aportes.id')} as total_reacciones
 `
 
 /* ----- Rutas ----- */
@@ -182,8 +196,11 @@ app.get('/api/aportes', async (req, res) => {
         a.created_at, a.updated_at,
         (CASE WHEN a.clave_edicion != '' THEN 1 ELSE 0 END) as tiene_clave,
         (SELECT CAST(COUNT(*) AS INTEGER) FROM comentarios c WHERE c.aporte_id = a.id) as total_comentarios,
-        ${SQL_TOTAL_REACCIONES_APORTE('a.id')} as total_reacciones
+        ${sqlTotalReacciones('aporte', 'a.id')} as total_reacciones,
+        (CASE WHEN j.aporte_id IS NULL THEN 0 ELSE 1 END) as en_juicio,
+        COALESCE(j.veredicto, '') as juicio_veredicto
       FROM aportes a
+      LEFT JOIN juicios j ON j.aporte_id = a.id
       ORDER BY a.created_at DESC
     `)
     res.json(rows)
@@ -203,14 +220,17 @@ app.get('/api/aportes/:id', async (req, res) => {
     }
 
     const comentarios = await req.db.all(`
-      SELECT comentarios.*, ${SQL_TOTAL_REACCIONES_COMENTARIO('comentarios.id')} as total_reacciones
+      SELECT comentarios.*, ${sqlTotalReacciones('comentario', 'comentarios.id')} as total_reacciones,
+        COALESCE(b.bando, '') as bando
       FROM comentarios
+      LEFT JOIN bandos_comentario b ON b.comentario_id = comentarios.id
       WHERE aporte_id = ?
       ORDER BY created_at ASC
     `, [req.params.id])
 
     res.json({
       ...aporte,
+      juicio: await obtenerJuicio(req.db, req.params.id),
       comentarios
     })
   } catch (error) {
@@ -376,9 +396,13 @@ app.delete('/api/aportes/:id', async (req, res) => {
     )
     if (!aporte) return
 
-    await borrarReaccionesDeAporte(req.db, req.params.id)
-    await req.db.run('DELETE FROM comentarios WHERE aporte_id = ?', [req.params.id])
-    await req.db.run('DELETE FROM aportes WHERE id = ?', [req.params.id])
+    // Todo o nada: si algo falla no quedan comentarios o reacciones huérfanos
+    await req.db.transaction(async tx => {
+      await borrarReaccionesDeAporte(tx, req.params.id)
+      await borrarJuicioDeAporte(tx, req.params.id)
+      await tx.run('DELETE FROM comentarios WHERE aporte_id = ?', [req.params.id])
+      await tx.run('DELETE FROM aportes WHERE id = ?', [req.params.id])
+    })
     res.json({ message: 'Aporte eliminado correctamente' })
   } catch (error) {
     console.error('Error al eliminar aporte:', error)
@@ -407,16 +431,26 @@ app.post('/api/aportes/:id/comentarios', async (req, res) => {
       return res.status(404).json({ error: 'Aporte no encontrado' })
     }
 
+    // En un aporte en juicio cada réplica escoge bando; si no dice nada, queda neutral
+    const enJuicio = Boolean(await obtenerJuicio(req.db, aporteId))
+    const bando = enJuicio ? (texto(req.body?.bando) || 'neutral') : ''
+    if (enJuicio && !BANDOS.includes(bando)) {
+      return res.status(400).json({ error: 'Bando no válido: escoge Fiscalía, Defensa o Neutral' })
+    }
+
     const id = crypto.randomUUID()
     const now = new Date().toISOString()
 
-    await req.db.run(`
-      INSERT INTO comentarios (id, aporte_id, autor, comentario_citado, contenido, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [id, aporteId, autor, comentarioCitado, contenido, now])
+    await req.db.transaction(async tx => {
+      await tx.run(`
+        INSERT INTO comentarios (id, aporte_id, autor, comentario_citado, contenido, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [id, aporteId, autor, comentarioCitado, contenido, now])
+      if (bando) await guardarBando(tx, id, bando)
+    })
 
     const nuevoComentario = await req.db.get('SELECT * FROM comentarios WHERE id = ?', [id])
-    res.status(201).json(nuevoComentario)
+    res.status(201).json({ ...nuevoComentario, bando })
   } catch (error) {
     console.error('Error al guardar comentario:', error)
     res.status(500).json({ error: 'Error al agregar comentario' })
@@ -428,8 +462,11 @@ app.delete('/api/comentarios/:id', async (req, res) => {
   try {
     if (!exigirAdmin(req, res, 'Solo el administrador puede eliminar comentarios')) return
 
-    await borrarReaccionesDeComentario(req.db, req.params.id)
-    await req.db.run('DELETE FROM comentarios WHERE id = ?', [req.params.id])
+    await req.db.transaction(async tx => {
+      await borrarReaccionesDeComentario(tx, req.params.id)
+      await borrarBandoDeComentario(tx, req.params.id)
+      await tx.run('DELETE FROM comentarios WHERE id = ?', [req.params.id])
+    })
     res.json({ message: 'Comentario eliminado' })
   } catch (error) {
     console.error('Error al eliminar comentario:', error)
@@ -437,12 +474,103 @@ app.delete('/api/comentarios/:id', async (req, res) => {
   }
 })
 
-// Poner o quitar la reacción "Útil" de este navegador sobre un aporte o comentario
+/* ----- El Juicio de Macondo (exclusivo del administrador) ----- */
+
+// Poner un aporte en juicio (abierto: true) o archivar su juicio (abierto: false)
+app.post('/api/aportes/:id/juicio', async (req, res) => {
+  try {
+    if (!exigirAdmin(req, res, 'Solo el administrador puede abrir o archivar un juicio')) return
+
+    const abierto = req.body?.abierto
+    if (typeof abierto !== 'boolean') {
+      return res.status(400).json({ error: 'Indica si el juicio queda abierto (abierto: true o false)' })
+    }
+    const aporte = await req.db.get('SELECT id FROM aportes WHERE id = ?', [req.params.id])
+    if (!aporte) {
+      return res.status(404).json({ error: 'Aporte no encontrado' })
+    }
+
+    if (abierto) {
+      res.json({ juicio: await abrirJuicio(req.db, req.params.id) })
+    } else {
+      await archivarJuicio(req.db, req.params.id)
+      res.json({ juicio: null })
+    }
+  } catch (error) {
+    console.error('Error al cambiar el juicio:', error)
+    res.status(500).json({ error: 'Error al cambiar el estado del juicio' })
+  }
+})
+
+// Dictar (o corregir) la sentencia de un aporte en juicio. No toca la calificación.
+app.post('/api/aportes/:id/sentencia', async (req, res) => {
+  try {
+    if (!exigirAdmin(req, res, 'Solo el administrador puede dictar sentencia')) return
+
+    const veredicto = texto(req.body?.veredicto)
+    const sentencia = texto(req.body?.sentencia)
+    if (!VEREDICTOS.includes(veredicto)) {
+      return res.status(400).json({ error: 'Veredicto no válido' })
+    }
+    if (!sentencia) {
+      return res.status(400).json({ error: 'Escribe los argumentos de la sentencia' })
+    }
+    if (sentencia.length > MAX_SENTENCIA) {
+      return res.status(400).json({ error: `La sentencia es demasiado larga (máximo ${MAX_SENTENCIA.toLocaleString('es-CO')} caracteres).` })
+    }
+    if (!(await obtenerJuicio(req.db, req.params.id))) {
+      return res.status(404).json({ error: 'Este aporte no está en juicio' })
+    }
+
+    res.json({ juicio: await dictarSentencia(req.db, req.params.id, veredicto, sentencia) })
+  } catch (error) {
+    console.error('Error al dictar sentencia:', error)
+    res.status(500).json({ error: 'Error al dictar la sentencia' })
+  }
+})
+
+/* ----- Panel del Profe (exclusivo del administrador) ----- */
+
+// Todo lo que el panel necesita en una sola petición: los aportes con su nota y
+// cuántas réplicas escribió cada autor (por el nombre que puso al comentar)
+app.get('/api/admin/resumen', async (req, res) => {
+  try {
+    if (!exigirAdmin(req, res, 'Solo el administrador puede ver el panel del profe')) return
+
+    const aportes = await req.db.all(`
+      SELECT
+        a.id, a.autor, a.ficha, a.calificacion, a.retroalimentacion, a.calificado_at, a.created_at,
+        (SELECT CAST(COUNT(*) AS INTEGER) FROM comentarios c WHERE c.aporte_id = a.id) as total_comentarios,
+        ${sqlTotalReacciones('aporte', 'a.id')} as total_reacciones
+      FROM aportes a
+      ORDER BY a.created_at ASC
+    `)
+    const replicas = await req.db.all(`
+      SELECT autor, aporte_id, created_at FROM comentarios ORDER BY created_at ASC
+    `)
+    res.json({ aportes, replicas })
+  } catch (error) {
+    console.error('Error al armar el resumen del profe:', error)
+    res.status(500).json({ error: 'Error al cargar el panel del profe' })
+  }
+})
+
+// Poner (reaccionar: true) o quitar (reaccionar: false) la reacción "Útil" de este navegador
+// sobre un aporte o comentario. Repetir la misma petición deja el mismo resultado.
 app.post('/api/reacciones', async (req, res) => {
   try {
+    // Límite por persona (IP) para que nadie infle los contadores con peticiones automáticas.
+    // Cuenta todas las peticiones, válidas o no, en la misma tabla que los intentos de clave.
+    const ip = ipDeLaPeticion(req)
+    if (await demasiadosIntentos(req.db, ip, OBJETIVO_LIMITE_REACCIONES, MAX_REACCIONES_POR_IP)) {
+      return res.status(429).json({ error: MENSAJE_DEMASIADOS_INTENTOS })
+    }
+    await registrarFallo(req.db, ip, OBJETIVO_LIMITE_REACCIONES)
+
     const tipo = texto(req.body?.tipo)
     const id = texto(req.body?.id)
     const votante = req.body?.votante
+    const reaccionar = req.body?.reaccionar
 
     if (!TIPOS_REACCION.includes(tipo) || !id) {
       return res.status(400).json({ error: 'Reacción no válida' })
@@ -450,11 +578,14 @@ app.post('/api/reacciones', async (req, res) => {
     if (!votanteValido(votante)) {
       return res.status(400).json({ error: 'Identificador de navegador no válido' })
     }
+    if (typeof reaccionar !== 'boolean') {
+      return res.status(400).json({ error: 'Indica si quieres poner o quitar la reacción (reaccionar: true o false)' })
+    }
     if (!(await objetivoExiste(req.db, tipo, id))) {
       return res.status(404).json({ error: tipo === 'aporte' ? 'Aporte no encontrado' : 'Comentario no encontrado' })
     }
 
-    res.json(await alternarReaccion(req.db, tipo, id, votante))
+    res.json(await fijarReaccion(req.db, tipo, id, votante, reaccionar))
   } catch (error) {
     console.error('Error al registrar reacción:', error)
     res.status(500).json({ error: 'Error al registrar la reacción' })

@@ -152,10 +152,33 @@ export function deleteComentario(id) {
   })
 }
 
-// Pone o quita la reacción "Útil" de este navegador. Responde { reaccionado, total }.
-export function toggleReaccion(tipo, id) {
+// Pone (reaccionar = true) o quita (false) la reacción "Útil" de este navegador.
+// Responde { reaccionado, total }.
+export function fijarReaccion(tipo, id, reaccionar) {
   return request('/reacciones', {
     method: 'POST',
-    body: { tipo, id, votante: idVotante() }
+    body: { tipo, id, votante: idVotante(), reaccionar }
   })
+}
+
+/* ----- El Juicio de Macondo y Panel del Profe (exclusivos del administrador) ----- */
+
+// Abre (true) o archiva (false) el juicio de un aporte. Responde { juicio }.
+export function fijarJuicio(aporteId, abierto) {
+  return request(`/aportes/${encodeURIComponent(aporteId)}/juicio`, {
+    method: 'POST',
+    body: { abierto }
+  })
+}
+
+export function dictarSentencia(aporteId, { veredicto, sentencia }) {
+  return request(`/aportes/${encodeURIComponent(aporteId)}/sentencia`, {
+    method: 'POST',
+    body: { veredicto, sentencia }
+  })
+}
+
+// { aportes, replicas } para armar la tabla de notas
+export function fetchResumenProfe() {
+  return request('/admin/resumen')
 }
