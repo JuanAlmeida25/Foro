@@ -140,8 +140,16 @@
           </div>
 
           <div class="lic-foot">
-            <span><b>Proyectos que la usan:</b> {{ lic.proyectos }}</span>
-            <span><b>Ideal para:</b> {{ lic.ideal }}</span>
+            <div class="lic-ideal">
+              <span class="lic-ideal-icono" aria-hidden="true">🎯</span>
+              <span><b>Ideal para:</b> {{ lic.ideal }}</span>
+            </div>
+            <div>
+              <b class="lic-proyectos-titulo">🧰 Software conocido que la usa</b>
+              <ul class="lic-proyectos">
+                <li v-for="p in lic.proyectos" :key="p" class="lic-proyecto">{{ p }}</li>
+              </ul>
+            </div>
           </div>
         </article>
       </div>
@@ -774,6 +782,62 @@ function textoMarca(tipo) {
 
 .lic-foot b {
   color: var(--fg);
+}
+
+.lic-ideal {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tone, var(--accent)) 10%, var(--surface));
+  color: var(--fg);
+}
+
+.lic-ideal-icono {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.lic-proyectos-titulo {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.lic-proyectos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Cada programa es una etiqueta con el color de la familia de la licencia */
+.lic-proyecto {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--tone, var(--accent)) 40%, var(--line));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--tone, var(--accent)) 25%, transparent);
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.lic-proyecto:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--tone, var(--accent)) 12%, var(--surface));
+  border-color: var(--tone, var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lic-proyecto { transition: none; }
+  .lic-proyecto:hover { transform: none; }
 }
 
 /* Tabla comparativa */

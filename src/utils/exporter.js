@@ -218,3 +218,66 @@ export async function buildPdfPreguntasSocializar(preguntas, respuestas) {
 
   return doc.output('blob')
 }
+
+// PDF de la ficha técnica que el aprendiz llenó en la pestaña del Caso MAREA
+export async function buildPdfFichaCaso(apartados, preguntas, respuestas) {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' })
+  const M = 54
+  const W = doc.internal.pageSize.getWidth() - M * 2
+  const H = doc.internal.pageSize.getHeight()
+  let y = M
+
+  const ensure = h => {
+    if (y + h > H - M) {
+      doc.addPage()
+      y = M
+    }
+  }
+
+  function para(text, size, style, after, color) {
+    doc.setFont('helvetica', style || 'normal')
+    doc.setFontSize(size)
+    doc.setTextColor.apply(doc, color || [23, 32, 43])
+    const lh = size * 1.42
+    pdfSafe(text).split('\n').forEach(p => {
+      if (!p.trim()) {
+        y += lh * 0.4
+        return
+      }
+      doc.splitTextToSize(p, W).forEach(line => {
+        ensure(lh)
+        doc.text(line, M, y)
+        y += lh
+      })
+    })
+    y += after || 0
+  }
+
+  const valor = id => (respuestas[id] || '').trim() || '(Sin diligenciar)'
+
+  para('SERVICIO NACIONAL DE APRENDIZAJE - SENA', 10, 'bold', 2, [89, 101, 117])
+  para('Ficha Técnica de Producto de Software', 16, 'bold', 2, [35, 64, 182])
+  para('Programa ADSO • Actividad Caso MAREA', 10, 'normal', 16, [89, 101, 117])
+
+  apartados.forEach(a => {
+    ensure(50)
+    para(a.titulo, 12.5, 'bold', 6, [35, 64, 182])
+    a.campos.forEach(c => {
+      ensure(30)
+      para(c.label, 9.5, 'bold', 2, [89, 101, 117])
+      para(valor(c.id), 10, 'normal', 8, [40, 50, 65])
+    })
+    y += 6
+  })
+
+  ensure(50)
+  para('Preguntas de análisis', 12.5, 'bold', 8, [35, 64, 182])
+  preguntas.forEach((p, idx) => {
+    ensure(40)
+    para((idx + 1) + '. ' + p.titulo, 10.5, 'bold', 3)
+    para(p.pregunta, 9.5, 'italic', 4, [89, 101, 117])
+    para(valor(p.id), 10, 'normal', 12, [40, 50, 65])
+  })
+
+  return doc.output('blob')
+}

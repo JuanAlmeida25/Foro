@@ -16,3 +16,7 @@ server/*.db-journal
 *.db-wal
 *.db-shm
 *.db-journal
+
+# Calificaciones con datos personales de los aprendices (nunca al repo)
+calificaciones-*.md
+calificaciones-*.xlsx

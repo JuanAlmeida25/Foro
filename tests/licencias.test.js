@@ -26,10 +26,10 @@ test('Licencias: ids únicos, campos obligatorios y categoría existente', () =>
 
   const categorias = new Set(CATEGORIAS_LICENCIA.map(c => c.id))
   for (const l of LICENCIAS) {
-    for (const campo of ['id', 'nombre', 'corto', 'spdx', 'resumen', 'proyectos', 'ideal', 'abuela']) {
+    for (const campo of ['id', 'nombre', 'corto', 'spdx', 'resumen', 'ideal', 'abuela']) {
       assert.ok(textoNoVacio(l[campo]), `${l.id}: falta "${campo}"`)
     }
-    for (const lista of ['permite', 'exige', 'limita']) {
+    for (const lista of ['permite', 'exige', 'limita', 'proyectos']) {
       assert.ok(Array.isArray(l[lista]) && l[lista].length > 0, `${l.id}: "${lista}" debe tener al menos un elemento`)
       assert.ok(l[lista].every(textoNoVacio), `${l.id}: "${lista}" tiene elementos vacíos`)
     }
