@@ -3,15 +3,15 @@
     <template v-if="!s.termino">{{ s.texto }}</template>
     <span
       v-else
-      :class="['glosa', { abierta: abierta === i, derecha: alDerecha === i }]"
-      @mouseenter="ubicar($event, i)"
+      :class="['glosa', { abierta: abierta === i }]"
+      @mouseenter="ubicar($event.currentTarget)"
     >
       <button
         class="glosa-termino"
         type="button"
         :aria-expanded="abierta === i"
         :aria-describedby="`${idBase}-${i}`"
-        @click="alternar($event, i)"
+        @click="alternar($event.currentTarget.parentElement, i)"
         @keydown.esc="abierta = null"
         @blur="abierta = null"
       >{{ s.texto }}</button>
@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { TERMINOS } from '../data/glosario.js'
 import { marcarTerminos } from '../utils/glosario.js'
 
@@ -39,18 +39,30 @@ const segmentos = computed(() => marcarTerminos(props.texto, TERMINOS))
 
 // En el celular no hay "pasar el mouse": la definición se abre y se cierra tocando el término
 const abierta = ref(null)
-// Si el término queda en la mitad derecha de la pantalla, el cuadrito se abre hacia la izquierda
-// para no salirse del borde (y no crear scroll horizontal)
-const alDerecha = ref(null)
 
-function ubicar(evento, i) {
-  const { left } = evento.currentTarget.getBoundingClientRect()
-  alDerecha.value = left > window.innerWidth / 2 ? i : null
+const MARGEN = 8
+
+// Ya con el cuadrito visible se mide y, si se sale por algún borde, se corre hacia adentro.
+// Así no aparece scroll horizontal ni queda media definición cortada en el celular.
+function ubicar(glosa) {
+  requestAnimationFrame(() => {
+    const tip = glosa.querySelector('.glosa-tip')
+    if (!tip) return
+    tip.style.setProperty('--mover', '0px')
+    const caja = tip.getBoundingClientRect()
+    if (!caja.width) return // sigue escondido (el mouse ya se fue)
+    const ancho = document.documentElement.clientWidth
+    let mover = 0
+    if (caja.right > ancho - MARGEN) mover = ancho - MARGEN - caja.right
+    if (caja.left + mover < MARGEN) mover = MARGEN - caja.left
+    tip.style.setProperty('--mover', `${mover}px`)
+  })
 }
 
-function alternar(evento, i) {
-  ubicar({ currentTarget: evento.currentTarget.parentElement }, i)
+async function alternar(glosa, i) {
   abierta.value = abierta.value === i ? null : i
+  await nextTick()
+  if (abierta.value === i) ubicar(glosa)
 }
 </script>
 
@@ -59,16 +71,23 @@ function alternar(evento, i) {
   position: relative;
 }
 
+/* Que se note que el término se puede tocar: color de acento, fondito suave y subrayado */
 .glosa-termino {
   font: inherit;
-  color: inherit;
-  background: none;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
   border: 0;
-  padding: 0;
+  border-radius: 4px;
+  padding: 0 3px;
   cursor: help;
   text-decoration: underline dotted var(--accent);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
+}
+
+.glosa-termino:hover {
+  text-decoration-style: solid;
 }
 
 .glosa-termino:focus-visible {
@@ -95,10 +114,11 @@ function alternar(evento, i) {
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: var(--shadow-lg);
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity .15s ease, visibility .15s;
+  /* display: none y no visibility: hidden: un cuadrito escondido igual ocupa espacio
+     y los del borde derecho creaban scroll horizontal en toda la página */
+  display: none;
   pointer-events: none;
+  transform: translateX(var(--mover, 0px));
 }
 
 .glosa-tip b {
@@ -107,19 +127,9 @@ function alternar(evento, i) {
   margin-bottom: 2px;
 }
 
-.glosa.derecha .glosa-tip {
-  left: auto;
-  right: 0;
-}
-
 .glosa:hover .glosa-tip,
 .glosa:focus-within .glosa-tip,
 .glosa.abierta .glosa-tip {
-  visibility: visible;
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .glosa-tip { transition: none; }
+  display: block;
 }
 </style>

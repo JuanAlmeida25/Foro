@@ -38,6 +38,13 @@
             📘 Ficha Técnica y Normas
           </button>
           <button
+            :class="['nav-tab', { active: currentTab === 'caso-ficha' }]"
+            type="button"
+            @click="currentTab = 'caso-ficha'"
+          >
+            🧩 Caso Ficha Técnica
+          </button>
+          <button
             :class="['nav-tab', { active: currentTab === 'licencias' }]"
             type="button"
             @click="currentTab = 'licencias'"
@@ -333,6 +340,11 @@
         <FichaTecnicaInfo />
       </section>
 
+      <!-- VISTA: ACTIVIDAD CASO MAREA (elaborar una ficha técnica a partir de un caso) -->
+      <section v-else-if="currentTab === 'caso-ficha'">
+        <ActividadFichaCaso :is-admin="isAdmin" />
+      </section>
+
       <!-- VISTA: LICENCIAS MÁS USADAS EN EL DESARROLLO DE SOFTWARE (SOLO INFORMATIVA) -->
       <section v-else-if="currentTab === 'licencias'">
         <LicenciasInfo />
@@ -439,12 +451,13 @@ import {
 
 // La actividad de repaso se carga solo al abrir su pestaña, para no agrandar el paquete inicial
 const ActividadRepaso = defineAsyncComponent(() => import('./components/ActividadRepaso.vue'))
+const ActividadFichaCaso = defineAsyncComponent(() => import('./components/ActividadFichaCaso.vue'))
 const LicenciasInfo = defineAsyncComponent(() => import('./components/LicenciasInfo.vue'))
 const GlosarioInfo = defineAsyncComponent(() => import('./components/GlosarioInfo.vue'))
 const PanelProfe = defineAsyncComponent(() => import('./components/PanelProfe.vue'))
 
 // Estado de navegación y administración
-const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'licencias' | 'glosario' | 'repaso' | 'panel'
+const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'caso-ficha' | 'licencias' | 'glosario' | 'repaso' | 'panel'
 const aportesList = ref([])
 const aporteSeleccionado = ref(null)
 const cargandoAportes = ref(false)
@@ -478,6 +491,7 @@ const savedAtText = computed(() =>
 
 const pillTone = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'ok'
+  if (currentTab.value === 'caso-ficha') return 'ok'
   if (currentTab.value === 'licencias') return 'ok'
   if (currentTab.value === 'glosario') return 'ok'
   if (currentTab.value === 'repaso') return 'ok'
@@ -489,6 +503,7 @@ const pillTone = computed(() => {
 
 const pillText = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'Guía Informativa'
+  if (currentTab.value === 'caso-ficha') return 'Caso práctico'
   if (currentTab.value === 'licencias') return 'Guía de licencias'
   if (currentTab.value === 'glosario') return 'Glosario'
   if (currentTab.value === 'repaso') return 'Práctica de repaso'
