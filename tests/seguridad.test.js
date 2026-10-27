@@ -37,7 +37,7 @@ test('El token de sesión de administrador no se puede falsificar', () => {
   assert.equal(sesionAdminValida(`${rol}.${fecha}.${firma.slice(0, -2)}xx`), false, 'Una firma alterada no vale')
   assert.equal(sesionAdminValida(`admin.${Date.now() - 1}.${firma}`), false, 'Un token vencido no vale')
   assert.equal(sesionAdminValida(''), false)
-  assert.equal(sesionAdminValida('CLAVE-VIEJA'), false)
+  assert.equal(sesionAdminValida('clave-adivinada'), false)
 })
 
 test('Solo la clave de administrador exacta es aceptada', () => {
@@ -55,14 +55,14 @@ test('La clave de administrador no aparece en el código del navegador', () => {
   ]
   for (const archivo of archivos) {
     const contenido = fs.readFileSync(path.join(__dirname, archivo), 'utf8')
-    assert.doesNotMatch(contenido, /['"`]CLAVE-VIEJA['"`]/, `${archivo} no debe contener la clave CLAVE-VIEJA`)
+    assert.doesNotMatch(contenido, /ADMIN_KEY\s*[:=]\s*['"`]/, `${archivo} no debe traer la clave de admin escrita`)
   }
 })
 
-test('La antigua clave pública CLAVE-VIEJA ya no abre el modo admin', () => {
-  assert.equal(esClaveAdmin('CLAVE-VIEJA'), false)
+test('Sin ADMIN_KEY no hay clave por defecto que abra el modo admin', () => {
+  assert.equal(esClaveAdmin('clave-adivinada'), false)
   const codigo = fs.readFileSync(path.join(__dirname, '../server/seguridad.js'), 'utf8')
-  assert.doesNotMatch(codigo, /['"`]CLAVE-VIEJA['"`]/, 'El servidor no debe traer una clave por defecto')
+  assert.doesNotMatch(codigo, /CLAVE_ADMIN_POR_DEFECTO|ADMIN_KEY\s*=\s*['"`]/, 'El servidor no debe traer una clave por defecto')
 })
 
 test('El solucionario del caso no viaja en el código del navegador', () => {

@@ -265,13 +265,13 @@ async function createSqliteAdapter() {
 }
 
 // Ajustes de seguridad sobre datos que ya existían (se pueden ejecutar muchas veces sin problema):
-// 1. La guía oficial tenía como clave de autor "CLAVE-VIEJA", la antigua clave pública de administrador.
-//    Ahora no tiene clave de autor, así que solo el administrador puede modificarla.
+// 1. La guía oficial venía con la antigua clave pública de administrador como clave de autor.
+//    Ahora no lleva ninguna, así que solo el administrador puede modificarla.
 // 2. Las claves de autor guardadas tal cual se reemplazan por su versión cifrada.
 async function migrarSeguridad(db) {
   await db.run(
-    "UPDATE aportes SET clave_edicion = '' WHERE id = ? AND clave_edicion = ?",
-    [SEED_APORTE_ID, 'CLAVE-VIEJA']
+    "UPDATE aportes SET clave_edicion = '' WHERE id = ? AND clave_edicion != ''",
+    [SEED_APORTE_ID]
   )
 
   const pendientes = await db.all(

@@ -21,7 +21,7 @@ test('Integridad de la Guía Oficial del Instructor en el Foro', () => {
   assert.ok(guia, 'La guía oficial del instructor debe estar presente')
   assert.equal(guia.autor, 'Instructor / Vocero ADSO')
   assert.equal(guia.calificacion, 98, 'La guía debe conservar su calificación oficial')
-  assert.equal(guia.clave_edicion, 'CLAVE-VIEJA', 'La guía debe conservar su clave de edición')
+  assert.equal(guia.clave_edicion, '', 'La guía no lleva clave de autor: solo el admin la edita')
 
   // Validar que los 4 pasos del instructivo estén completos
   assert.match(guia.respuesta, /PASO 1:\s*IDENTIFICACIÓN DEL APRENDIZ/i)

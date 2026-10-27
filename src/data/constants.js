@@ -79,14 +79,14 @@ En el campo "Respuesta y argumentación", redacta tu aporte reflexivo aseguránd
 1. Mientras redactas, el editor guarda automáticamente tus avances locales.
 2. Al terminar, haz clic en el botón "Publicar en el Foro" ubicado en la barra superior.
 3. Tu entrada quedará publicada de inmediato para toda la ficha, permitiendo que tus compañeros la lean y aporten réplicas reflexivas en la sección de comentarios.`,
-    clave_edicion: 'CLAVE-VIEJA',
+    clave_edicion: '',
     calificacion: 98,
     retroalimentacion: 'Excelente estructura metodológica. La guía cumple plenamente con los lineamientos de la competencia formativa.',
     calificado_at: '2026-10-09T03:46:33.699Z',
     created_at: '2026-10-09T03:46:33.699Z',
     updated_at: '2026-10-09T03:46:33.699Z',
     total_comentarios: 1,
-    tiene_clave: 1,
+    tiene_clave: 0,
     comentarios: [
       {
         id: 'comentario-demo-entrada',
