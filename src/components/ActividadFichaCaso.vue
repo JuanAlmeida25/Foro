@@ -7,8 +7,9 @@
       </div>
       <h2 class="caso-header-title">Caso MAREA: la cooperativa que quería dejar el cuaderno</h2>
       <p class="caso-header-desc">
-        Lean el caso, encuentren los datos regados en los cuatro documentos y elaboren la ficha técnica del software
-        con los 8 apartados de la pestaña «Ficha Técnica y Normas». Lo que escriban queda guardado en este navegador.
+        Lean el caso, encuentren los datos regados en los cuatro documentos, redacten el SRS (qué debe hacer el sistema)
+        y después elaboren la ficha técnica con los 8 apartados de la pestaña «Ficha técnica». Lo que escriban queda
+        guardado en este navegador.
       </p>
     </header>
 
@@ -116,20 +117,20 @@
       </ol>
     </section>
 
-    <!-- PLANTILLA -->
-    <section v-else-if="seccionActiva === 'plantilla'" class="caso-card-block">
+    <!-- PLANTILLAS: la del SRS y la de la ficha usan el mismo bloque, cada una con su configuración -->
+    <section v-else-if="plantillaActiva" class="caso-card-block">
       <div class="card-section-head">
         <div class="section-tag">Para diligenciar</div>
-        <h3>Plantilla de la ficha técnica</h3>
-        <p>Todo requisito no funcional debe ser medible. Donde usen un supuesto, márquenlo con [S#].</p>
+        <h3>{{ plantillaActiva.titulo }}</h3>
+        <p>{{ plantillaActiva.ayuda }}</p>
       </div>
 
       <div class="progreso" role="status">
-        <div class="progreso-barra"><span :style="{ width: progreso.porcentaje + '%' }"></span></div>
-        <span>{{ progreso.llenos }} de {{ progreso.total }} campos diligenciados</span>
+        <div class="progreso-barra"><span :style="{ width: plantillaActiva.progreso.porcentaje + '%' }"></span></div>
+        <span>{{ plantillaActiva.progreso.llenos }} de {{ plantillaActiva.progreso.total }} campos diligenciados</span>
       </div>
 
-      <fieldset v-for="a in APARTADOS_PLANTILLA" :key="a.id" class="apartado">
+      <fieldset v-for="a in plantillaActiva.apartados" :key="a.id" class="apartado">
         <legend>{{ a.titulo }}</legend>
         <div v-for="c in a.campos" :key="c.id" class="campo">
           <label :for="'caso-' + c.id">{{ c.label }}</label>
@@ -154,12 +155,21 @@
       </fieldset>
 
       <div class="acciones">
-        <button class="btn primary" type="button" :disabled="generandoPdf" @click="descargarPdf">
-          {{ generandoPdf ? 'Generando documento…' : 'Descargar PDF de mi ficha' }}
+        <button class="btn primary" type="button" :disabled="generandoPdf" @click="plantillaActiva.descargar">
+          {{ generandoPdf ? 'Generando documento…' : plantillaActiva.textoBoton }}
         </button>
         <button class="btn ghost sm" type="button" @click="limpiarRespuestas">Limpiar todo</button>
       </div>
     </section>
+
+    <!-- ENTREGA (por grupo, con la cuenta de aprendiz) -->
+    <EntregaCaso
+      v-else-if="seccionActiva === 'entrega'"
+      :respuestas="respuestas"
+      :progreso-srs="progresoSrs"
+      :progreso-ficha="progreso"
+      @ir-a-cuenta="emit('ir-a-cuenta')"
+    />
 
     <!-- PREGUNTAS -->
     <section v-else-if="seccionActiva === 'preguntas'" class="caso-card-block">
@@ -181,6 +191,22 @@
           @input="setRespuesta(p.id, $event.target.value)"
         ></textarea>
       </article>
+
+      <!-- Participantes en la creación de la ficha técnica -->
+      <article class="pregunta-card participantes-card">
+        <h4><span class="paso-n">👥</span> Participantes en la creación del SRS y la ficha técnica</h4>
+        <p>Ingresa los nombres de los aprendices que participaron. Salen en los dos PDF:</p>
+        <label for="caso-participantes" class="sr-only">Participantes en la creación del SRS y la ficha técnica</label>
+        <textarea
+          id="caso-participantes"
+          class="caso-input"
+          rows="3"
+          placeholder="Escribe aquí los nombres de los aprendices participantes (ej. Aprendiz 1, Aprendiz 2, Aprendiz 3)..."
+          :value="respuestas.participantes || ''"
+          @input="setRespuesta('participantes', $event.target.value)"
+        ></textarea>
+      </article>
+
       <div class="acciones">
         <button class="btn primary" type="button" :disabled="generandoPdf" @click="descargarPdf">
           {{ generandoPdf ? 'Generando documento…' : 'Descargar PDF de mi ficha' }}
@@ -231,7 +257,8 @@
         </p>
       </div>
 
-      <p v-if="!solucionario">Cargando solucionario…</p>
+      <p v-if="errorSolucionario">{{ errorSolucionario }}</p>
+      <p v-else-if="!solucionario">Cargando solucionario…</p>
       <template v-else>
         <div class="card-section-head">
           <div class="section-tag">Vacíos sembrados</div>
@@ -252,6 +279,17 @@
             </tbody>
           </table>
         </div>
+
+        <div class="card-section-head">
+          <div class="section-tag">SRS-ADSO-2026-07</div>
+          <h3>SRS de referencia (resumen)</h3>
+        </div>
+        <article v-for="a in solucionario.SRS_REFERENCIA" :key="a.titulo" class="doc-card">
+          <h4>{{ a.titulo }}</h4>
+          <ul class="doc-lista">
+            <li v-for="(p, i) in a.puntos" :key="i">{{ p }}</li>
+          </ul>
+        </article>
 
         <div class="card-section-head">
           <div class="section-tag">FT-ADSO-2026-07</div>
@@ -297,22 +335,28 @@ import {
   EQUIPO,
   INSTRUCCIONES,
   APARTADOS_PLANTILLA,
+  APARTADOS_SRS,
   PREGUNTAS_CASO,
   NOTA_APROBACION,
   RUBRICA_CASO
 } from '../data/casoFicha.js'
 import { progresoFicha, puntajeRubrica } from '../utils/casoFicha.js'
-import { buildPdfFichaCaso, downloadFile } from '../utils/exporter.js'
+import { buildPdfFichaCaso, buildPdfSrsCaso, downloadFile } from '../utils/exporter.js'
+import { fetchSolucionarioCaso } from '../services/api.js'
+import EntregaCaso from './EntregaCaso.vue'
 
 const props = defineProps({
   isAdmin: { type: Boolean, default: false }
 })
+const emit = defineEmits(['ir-a-cuenta'])
 
 const seccionTabs = [
   { id: 'caso', icono: '🐟', titulo: 'El Caso' },
   { id: 'instrucciones', icono: '🧭', titulo: 'Instrucciones' },
-  { id: 'plantilla', icono: '📝', titulo: 'Plantilla' },
+  { id: 'plantilla-srs', icono: '📄', titulo: 'Plantilla SRS' },
+  { id: 'plantilla', icono: '📝', titulo: 'Plantilla ficha' },
   { id: 'preguntas', icono: '❓', titulo: 'Preguntas' },
+  { id: 'entrega', icono: '📤', titulo: 'Entrega' },
   { id: 'rubrica', icono: '📊', titulo: 'Rúbrica' },
   { id: 'solucionario', icono: '🔑', titulo: 'Solucionario', soloAdmin: true }
 ]
@@ -321,14 +365,23 @@ const seccionActiva = ref('caso')
 const tabsVisibles = computed(() => seccionTabs.filter(t => !t.soloAdmin || props.isAdmin))
 const totalRubrica = puntajeRubrica(RUBRICA_CASO)
 
-// El solucionario se pide solo cuando entra el profe; así no viaja en el paquete de la pestaña
+// El solucionario se le pide al servidor solo con sesión de profe; no viaja en el paquete
 const solucionario = ref(null)
+const errorSolucionario = ref('')
 watch(() => props.isAdmin, async esAdmin => {
   if (!esAdmin) {
     if (seccionActiva.value === 'solucionario') seccionActiva.value = 'caso'
+    // Si se cierra la sesión, que no se quede el solucionario en memoria
+    solucionario.value = null
     return
   }
-  if (!solucionario.value) solucionario.value = await import('../data/casoFichaSolucionario.js')
+  if (solucionario.value) return
+  errorSolucionario.value = ''
+  try {
+    solucionario.value = await fetchSolucionarioCaso()
+  } catch (err) {
+    errorSolucionario.value = err.message || 'No se pudo cargar el solucionario'
+  }
 }, { immediate: true })
 
 function tituloPregunta(id) {
@@ -339,6 +392,32 @@ function tituloPregunta(id) {
 const respuestas = reactive({})
 const generandoPdf = ref(false)
 const progreso = computed(() => progresoFicha(APARTADOS_PLANTILLA, respuestas))
+const progresoSrs = computed(() => progresoFicha(APARTADOS_SRS, respuestas))
+
+// Lo que cambia entre la plantilla del SRS y la de la ficha; null si la pestaña activa no es una plantilla
+const plantillaActiva = computed(() => {
+  if (seccionActiva.value === 'plantilla-srs') {
+    return {
+      titulo: 'Plantilla del SRS',
+      ayuda: 'Cada requisito con código, singular y verificable. Si un requisito sale de un supuesto, márquenlo con [S#]. Guíense por la pestaña 📄 SRS del menú.',
+      apartados: APARTADOS_SRS,
+      progreso: progresoSrs.value,
+      textoBoton: 'Descargar PDF de mi SRS',
+      descargar: descargarPdfSrs
+    }
+  }
+  if (seccionActiva.value === 'plantilla') {
+    return {
+      titulo: 'Plantilla de la ficha técnica',
+      ayuda: 'Los módulos y los requisitos no funcionales salen del SRS. Todo requisito no funcional debe ser medible. Donde usen un supuesto, márquenlo con [S#].',
+      apartados: APARTADOS_PLANTILLA,
+      progreso: progreso.value,
+      textoBoton: 'Descargar PDF de mi ficha',
+      descargar: descargarPdf
+    }
+  }
+  return null
+})
 
 onMounted(() => {
   try {
@@ -359,7 +438,7 @@ function setRespuesta(id, valor) {
 }
 
 function limpiarRespuestas() {
-  if (!confirm('¿Deseas vaciar toda la ficha y las respuestas? No hay vuelta atrás.')) return
+  if (!confirm('¿Deseas vaciar el SRS, la ficha y las respuestas? No hay vuelta atrás.')) return
   Object.keys(respuestas).forEach(k => delete respuestas[k])
   try {
     localStorage.removeItem(LS_CASO_FICHA_KEY)
@@ -368,12 +447,30 @@ function limpiarRespuestas() {
   }
 }
 
+// Mismo código de grupo que la ficha, pero con el prefijo del SRS
+function nombreArchivo(base, idCodigo) {
+  const codigo = (respuestas[idCodigo] || '').trim().replace(/[^\w-]+/g, '_')
+  return base + (codigo ? '_' + codigo : '') + '.pdf'
+}
+
+async function descargarPdfSrs() {
+  generandoPdf.value = true
+  try {
+    const blob = await buildPdfSrsCaso(APARTADOS_SRS, respuestas)
+    await downloadFile(nombreArchivo('SRS_MAREA', 'srs-codigo'), blob)
+  } catch (e) {
+    console.error(e)
+    alert('No se pudo generar el PDF del SRS.')
+  } finally {
+    generandoPdf.value = false
+  }
+}
+
 async function descargarPdf() {
   generandoPdf.value = true
   try {
     const blob = await buildPdfFichaCaso(APARTADOS_PLANTILLA, PREGUNTAS_CASO, respuestas)
-    const codigo = (respuestas['enc-codigo'] || '').trim().replace(/[^\w-]+/g, '_')
-    await downloadFile('Ficha_Tecnica_MAREA' + (codigo ? '_' + codigo : '') + '.pdf', blob)
+    await downloadFile(nombreArchivo('Ficha_Tecnica_MAREA', 'enc-codigo'), blob)
   } catch (e) {
     console.error(e)
     alert('No se pudo generar el PDF de la ficha.')
@@ -784,6 +881,10 @@ input.info-val {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 18px 20px;
+}
+
+.participantes-card {
+  border-left: 4px solid var(--accent);
 }
 
 .pregunta-card h4 {

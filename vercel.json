@@ -1,7 +1,9 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/evaluacion", "destination": "/evaluacion.html" },
+    { "source": "/evaluacion.html", "destination": "/evaluacion.html" },
+    { "source": "/((?!api/|evaluacion).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

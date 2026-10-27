@@ -20,3 +20,13 @@ server/*.db-journal
 # Calificaciones con datos personales de los aprendices (nunca al repo)
 calificaciones-*.md
 calificaciones-*.xlsx
+
+# Base de datos local: trae nombres de aprendices, nunca al repo público
+server/foro.db
+*.db
+
+# Copias comprimidas del proyecto (pesan y arrastran la base de datos)
+*.zip
+
+# Cualquier .env, incluso los mal nombrados (sí, .env.local. con punto de más)
+.env*

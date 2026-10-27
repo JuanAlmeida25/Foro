@@ -12,6 +12,28 @@ const ADMIN_TOKEN_KEY = 'foro-admin-token'
 
 export const EVENTO_SESION_VENCIDA = 'foro:sesion-admin-vencida'
 
+// La sesión del aprendiz va en sessionStorage: en el PC del salón, al cerrar la pestaña nadie queda adentro
+const APRENDIZ_SESION_KEY = 'foro-aprendiz-sesion'
+export const EVENTO_SESION_APRENDIZ_VENCIDA = 'foro:sesion-aprendiz-vencida'
+
+export function sesionAprendizGuardada() {
+  try {
+    const sesion = JSON.parse(sessionStorage.getItem(APRENDIZ_SESION_KEY) || 'null')
+    return sesion && sesion.expira > Date.now() ? sesion : null
+  } catch (e) {
+    return null
+  }
+}
+
+export function guardarSesionAprendiz(sesion) {
+  try {
+    if (sesion) sessionStorage.setItem(APRENDIZ_SESION_KEY, JSON.stringify(sesion))
+    else sessionStorage.removeItem(APRENDIZ_SESION_KEY)
+  } catch (e) {
+    // Sin almacenamiento la sesión dura hasta recargar la página
+  }
+}
+
 function getAdminToken() {
   try {
     return sessionStorage.getItem(ADMIN_TOKEN_KEY) || ''
@@ -45,6 +67,8 @@ async function request(path, { method = 'GET', body } = {}) {
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   const token = getAdminToken()
   if (token) headers.Authorization = `Bearer ${token}`
+  const aprendiz = sesionAprendizGuardada()
+  if (aprendiz) headers['X-Aprendiz-Token'] = aprendiz.token
 
   let res
   try {
@@ -65,8 +89,13 @@ async function request(path, { method = 'GET', body } = {}) {
       clearAdminToken()
       window.dispatchEvent(new Event(EVENTO_SESION_VENCIDA))
     }
+    if (data && data.sesionAprendizVencida) {
+      guardarSesionAprendiz(null)
+      window.dispatchEvent(new Event(EVENTO_SESION_APRENDIZ_VENCIDA))
+    }
     const error = new Error((data && data.error) || `Error del servidor (${res.status})`)
     error.status = res.status
+    error.datos = data
     throw error
   }
   if (!esJson) {
@@ -181,4 +210,140 @@ export function dictarSentencia(aporteId, { veredicto, sentencia }) {
 // { aportes, replicas } para armar la tabla de notas
 export function fetchResumenProfe() {
   return request('/admin/resumen')
+}
+
+/* ----- Evaluaciones de Conocimientos (Examen Autónomo) ----- */
+
+// Envía la evaluación completada al servidor
+export function enviarEvaluacionAlServidor(datos) {
+  return request('/evaluaciones', {
+    method: 'POST',
+    body: datos
+  })
+}
+
+// Lista todas las evaluaciones recibidas (solo instructor)
+export function fetchEvaluacionesAdmin() {
+  return request('/admin/evaluaciones')
+}
+
+/* ----- Cuentas de aprendiz ----- */
+
+export function quienSoy() {
+  return request('/aprendices/yo')
+}
+
+export function registrarAprendiz(datos) {
+  return request('/aprendices/registro', { method: 'POST', body: datos })
+}
+
+export function entrarAprendiz(documento, pin) {
+  return request('/aprendices/entrar', { method: 'POST', body: { documento, pin } })
+}
+
+// Tipo de documento o firma (la firma, una sola vez)
+export function completarPerfil(datos) {
+  return request('/aprendices/perfil', { method: 'POST', body: datos })
+}
+
+export function fetchAprendicesAdmin() {
+  return request('/admin/aprendices')
+}
+
+export function corregirAprendiz(documento, datos) {
+  return request(`/admin/aprendices/${encodeURIComponent(documento)}`, { method: 'PUT', body: datos })
+}
+
+export function reiniciarPinAprendiz(documento) {
+  return request(`/admin/aprendices/${encodeURIComponent(documento)}/reiniciar-pin`, { method: 'POST' })
+}
+
+export function borrarFirmaAprendiz(documento) {
+  return request(`/admin/aprendices/${encodeURIComponent(documento)}?solo=firma`, { method: 'DELETE' })
+}
+
+export function borrarAprendiz(documento) {
+  return request(`/admin/aprendices/${encodeURIComponent(documento)}`, { method: 'DELETE' })
+}
+
+/* ----- Asistencia (solo instructor) ----- */
+
+export function fetchAsistencia() {
+  return request('/admin/asistencia')
+}
+
+// Lo mismo más los aprendices y sus firmas, para imprimir
+export function fetchPlanillaAsistencia() {
+  return request('/admin/asistencia/planilla')
+}
+
+export function marcarAsistencia(fecha, documentos, presente) {
+  return request('/admin/asistencia', { method: 'PUT', body: { fecha, documentos, presente } })
+}
+
+export function guardarEncabezadoAsistencia(encabezado) {
+  return request('/admin/asistencia/encabezado', { method: 'PUT', body: encabezado })
+}
+
+/* ----- Asistencia con código del día ----- */
+
+export function abrirAsistenciaHoy() {
+  return request('/admin/asistencia/abrir', { method: 'POST' })
+}
+
+// { abierta, codigo, cambiaEn, abiertaHasta, presentes }
+export function fetchCodigoAsistencia() {
+  return request('/admin/asistencia/codigo')
+}
+
+export function cerrarAsistenciaHoy() {
+  return request('/admin/asistencia/cerrar', { method: 'POST' })
+}
+
+export function marcarmeConCodigo(codigo) {
+  return request('/aprendices/asistencia', { method: 'POST', body: { codigo } })
+}
+
+/* ----- Mi boletín ----- */
+
+export function fetchMiBoletin() {
+  return request('/aprendices/yo/boletin')
+}
+
+/* ----- Entrega del Caso MAREA ----- */
+
+export function fetchCompaneros() {
+  return request('/aprendices/companeros')
+}
+
+export function fetchMiEntregaCaso() {
+  return request('/caso/entrega')
+}
+
+export function entregarCaso(respuestas, companeros) {
+  return request('/caso/entrega', { method: 'POST', body: { respuestas, companeros } })
+}
+
+export function fetchEntregasCaso() {
+  return request('/admin/caso/entregas')
+}
+
+export function fetchEntregaCaso(id) {
+  return request(`/admin/caso/entregas/${encodeURIComponent(id)}`)
+}
+
+export function calificarEntregaCaso(id, criterios, retroGeneral) {
+  return request(`/admin/caso/entregas/${encodeURIComponent(id)}/calificar`, { method: 'POST', body: { criterios, retroGeneral } })
+}
+
+// Solucionario del Caso MAREA (solo instructor)
+export function fetchSolucionarioCaso() {
+  return request('/admin/caso-ficha/solucionario')
+}
+
+// Elimina una evaluación (solo instructor)
+export function deleteEvaluacionAdmin(id) {
+  return request(`/admin/evaluaciones/${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+  })
 }

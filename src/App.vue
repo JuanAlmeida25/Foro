@@ -1,7 +1,7 @@
 <template>
   <div>
-    <!-- Encabezado principal -->
-    <header class="top">
+    <!-- Encabezado principal (oculto en evaluación para total aislamiento e independencia) -->
+    <header v-if="currentTab !== 'evaluacion'" class="top">
       <div class="wrap">
         <span class="top-eyebrow">⚖️ SENA • ADSO</span>
         <h1>Foro: <span class="hl">Licenciamiento de software</span></h1>
@@ -11,108 +11,66 @@
       </div>
     </header>
 
-    <!-- Barra de estado, navegación y control de roles -->
+    <!-- Barra fija en dos pisos: arriba el estado y las acciones, abajo las secciones -->
     <div class="bar">
-      <div class="wrap">
-        <nav class="nav-group" aria-label="Secciones">
-          <button
-            :class="['nav-tab', { active: currentTab === 'foro' }]"
-            type="button"
-            @click="currentTab = 'foro'"
-          >
-            Explorar Foro
-            <span class="counter-badge">{{ aportesList.length }}</span>
-          </button>
-          <button
-            :class="['nav-tab', { active: currentTab === 'editor' }]"
-            type="button"
-            @click="irAEditorNuevo"
-          >
-            {{ state.aporteIdPublicado ? 'Editar Aporte en Curso' : 'Redactar Mi Aporte' }}
-          </button>
-          <button
-            :class="['nav-tab', { active: currentTab === 'ficha-tecnica' }]"
-            type="button"
-            @click="currentTab = 'ficha-tecnica'"
-          >
-            📘 Ficha Técnica y Normas
-          </button>
-          <button
-            :class="['nav-tab', { active: currentTab === 'caso-ficha' }]"
-            type="button"
-            @click="currentTab = 'caso-ficha'"
-          >
-            🧩 Caso Ficha Técnica
-          </button>
-          <button
-            :class="['nav-tab', { active: currentTab === 'licencias' }]"
-            type="button"
-            @click="currentTab = 'licencias'"
-          >
-            ⚖️ Licencias de Software
-          </button>
-          <button
-            :class="['nav-tab', { active: currentTab === 'glosario' }]"
-            type="button"
-            @click="currentTab = 'glosario'"
-          >
-            📖 Glosario
-          </button>
-          <button
-            :class="['nav-tab', { active: currentTab === 'repaso' }]"
-            type="button"
-            @click="currentTab = 'repaso'"
-          >
-            🎯 Actividad de Repaso
-          </button>
-          <button
-            v-if="isAdmin"
-            :class="['nav-tab', { active: currentTab === 'panel' }]"
-            type="button"
-            @click="currentTab = 'panel'"
-          >
-            👨‍🏫 Panel del Profe
-          </button>
-        </nav>
-
-        <div class="actions" style="align-items: center;">
-          <!-- Estado de Administrador -->
-          <div v-if="isAdmin" style="display: flex; gap: 6px; align-items: center;">
-            <span class="admin-pill" title="Permisos totales de calificación y eliminación activos">
-              🛡️ Administrador Activo
-            </span>
-            <button class="btn sm" type="button" @click="cerrarSesionAdmin">
-              Salir de Admin
-            </button>
-          </div>
-          <button
-            v-else
-            class="btn ghost sm"
-            type="button"
-            @click="abrirLoginAdmin"
-          >
-            🔐 Acceso Admin
-          </button>
-
+      <div class="wrap bar-inner">
+        <div v-if="currentTab !== 'evaluacion'" class="bar-top">
           <span class="pill" role="status" :data-tone="pillTone">
             <span class="dot"></span>
             <span>{{ pillText }}</span>
           </span>
 
-          <button
-            v-if="currentTab === 'editor'"
-            class="btn primary"
-            type="button"
-            :disabled="publicando"
-            @click="publicarAporteEnForo"
-          >
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-              <path d="M3 2.5h8l2.5 2.5v8.5h-10.5z" />
-              <path d="M5.5 2.5v3.5h5v-3.5M5 13.5v-4h6v4" />
-            </svg>
-            {{ state.aporteIdPublicado ? 'Guardar Cambios' : 'Publicar en el Foro' }}
-          </button>
+          <div class="bar-acciones">
+            <button
+              :class="['cuenta-chip', { active: currentTab === 'cuenta', 'con-sesion': aprendiz }]"
+              type="button"
+              :title="aprendiz ? `Sesión de ${aprendiz.nombre}` : 'Entrar o registrarme'"
+              @click="currentTab = 'cuenta'"
+            >
+              <span class="cuenta-avatar" aria-hidden="true">{{ aprendiz ? aprendiz.nombre.charAt(0) : '👤' }}</span>
+              <span>{{ aprendiz ? aprendiz.nombre.split(' ')[0] : 'Mi cuenta' }}</span>
+            </button>
+
+            <template v-if="isAdmin">
+              <span class="admin-pill" title="Permisos totales de calificación y eliminación activos">🛡️ Admin</span>
+              <button class="btn ghost sm" type="button" @click="cerrarSesionAdmin">Salir</button>
+            </template>
+            <button v-else class="btn ghost sm" type="button" @click="abrirLoginAdmin">🔐 Admin</button>
+
+            <button
+              v-if="currentTab === 'editor'"
+              class="btn primary sm"
+              type="button"
+              :disabled="publicando"
+              @click="publicarAporteEnForo"
+            >
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M3 2.5h8l2.5 2.5v8.5h-10.5z" />
+                <path d="M5.5 2.5v3.5h5v-3.5M5 13.5v-4h6v4" />
+              </svg>
+              {{ state.aporteIdPublicado ? 'Guardar Cambios' : 'Publicar en el Foro' }}
+            </button>
+          </div>
         </div>
+
+        <!-- En pantallas angostas las secciones se deslizan de lado en vez de amontonarse -->
+        <nav ref="navEl" class="nav-scroll" aria-label="Secciones">
+          <template v-for="(grupo, i) in gruposNav" :key="i">
+            <span v-if="i" class="nav-sep" aria-hidden="true"></span>
+            <button
+              v-for="t in grupo"
+              :key="t.id"
+              :class="['nav-tab', { active: t.activa }]"
+              type="button"
+              :aria-current="t.activa ? 'page' : undefined"
+              @click="t.ir ? t.ir() : (currentTab = t.id)"
+            >
+              <span aria-hidden="true">{{ t.icono }}</span>
+              {{ t.nombre }}
+              <span v-if="t.contador !== undefined" class="counter-badge">{{ t.contador }}</span>
+            </button>
+          </template>
+        </nav>
       </div>
     </div>
 
@@ -143,6 +101,7 @@
           @calificar-aporte="handleCalificarAporte"
           @fijar-juicio="handleFijarJuicio"
           @dictar-sentencia="handleDictarSentencia"
+          @ir-a-cuenta="currentTab = 'cuenta'"
           @toast="toast"
         />
       </section>
@@ -160,7 +119,7 @@
                 <p>
                   {{ state.aporteIdPublicado
                     ? 'Modifica tu pregunta orientadora o respuesta. Al pulsar Guardar Cambios se actualizará para todos.'
-                    : 'Escribe tu pregunta orientadora, tu respuesta y define una clave de autor para proteger futuras ediciones.' }}
+                    : 'Escribe tu respuesta a la pregunta orientadora. Se publica con el nombre de tu cuenta de aprendiz.' }}
                 </p>
               </div>
               <div v-if="state.aporteIdPublicado">
@@ -171,8 +130,26 @@
             </div>
 
             <div class="sheet-body">
-              <!-- Datos del aprendiz -->
-              <div class="who">
+              <!-- Sin cuenta se puede ir redactando (queda en este navegador), pero para publicar hay que entrar -->
+              <div v-if="necesitaCuenta" class="aviso-cuenta" role="note">
+                <span>👤 Para publicar en el foro entra con tu cuenta de aprendiz. Lo que escribas aquí no se pierde mientras tanto.</span>
+                <button class="btn primary sm" type="button" @click="currentTab = 'cuenta'">Entrar o registrarme</button>
+              </div>
+
+              <!-- Con cuenta, el nombre y la ficha salen de ella: nadie publica con el nombre de otro -->
+              <div v-if="autorDesdeCuenta" class="who">
+                <div>
+                  <span class="lbl">Nombre del Aprendiz</span>
+                  <div class="inp inp-cuenta">{{ aprendiz.nombre }}</div>
+                </div>
+                <div>
+                  <span class="lbl">Número de Ficha</span>
+                  <div class="inp inp-cuenta">{{ aprendiz.ficha || '—' }}</div>
+                </div>
+              </div>
+
+              <!-- Datos del aprendiz (admin, o aporte viejo que se edita con su clave de autor) -->
+              <div v-else-if="!necesitaCuenta" class="who">
                 <div>
                   <label class="lbl" for="f-autor">Nombre del Aprendiz</label>
                   <input
@@ -195,22 +172,6 @@
                     @input="setField('ficha', $event.target.value)"
                   />
                 </div>
-              </div>
-
-              <!-- Clave personal de autor -->
-              <div style="padding-top: 10px; max-width: 320px;">
-                <label class="lbl" for="f-clave">
-                  Clave o PIN de Autor (mínimo 4 caracteres, para editar en el futuro)
-                </label>
-                <input
-                  id="f-clave"
-                  class="inp"
-                  type="password"
-                  placeholder="Ej. 1234"
-                  autocomplete="new-password"
-                  :value="state.aporte.clave_edicion"
-                  @input="setField('clave_edicion', $event.target.value)"
-                />
               </div>
 
               <!-- Pregunta orientadora oficial (No editable de ninguna forma) -->
@@ -335,6 +296,11 @@
         </aside>
       </section>
 
+      <!-- VISTA: QUÉ ES EL SRS Y LAS NORMAS Y LEYES QUE LO RIGEN (SOLO INFORMATIVA) -->
+      <section v-else-if="currentTab === 'srs'">
+        <SrsInfo />
+      </section>
+
       <!-- VISTA 4: FICHA TÉCNICA Y MARCO NORMATIVO (SOLO INFORMATIVA) -->
       <section v-else-if="currentTab === 'ficha-tecnica'">
         <FichaTecnicaInfo />
@@ -342,7 +308,7 @@
 
       <!-- VISTA: ACTIVIDAD CASO MAREA (elaborar una ficha técnica a partir de un caso) -->
       <section v-else-if="currentTab === 'caso-ficha'">
-        <ActividadFichaCaso :is-admin="isAdmin" />
+        <ActividadFichaCaso :is-admin="isAdmin" @ir-a-cuenta="currentTab = 'cuenta'" />
       </section>
 
       <!-- VISTA: LICENCIAS MÁS USADAS EN EL DESARROLLO DE SOFTWARE (SOLO INFORMATIVA) -->
@@ -360,9 +326,19 @@
         <ActividadRepaso />
       </section>
 
+      <!-- VISTA: CUENTA DEL APRENDIZ (registro, entrada y firma) -->
+      <section v-else-if="currentTab === 'cuenta'">
+        <MiCuenta @ir-a="irA" @toast="toast" />
+      </section>
+
       <!-- VISTA: PANEL DEL PROFE (solo administrador) -->
       <section v-else-if="currentTab === 'panel' && isAdmin">
         <PanelProfe @ver-aporte="abrirDetalleAporte" @toast="toast" />
+      </section>
+
+      <!-- VISTA: EVALUACIÓN (INDIVIDUAL, AISLADA SIN CONTENIDO DEL FORO) -->
+      <section v-else-if="currentTab === 'evaluacion'">
+        <EvaluacionApp />
       </section>
       </Transition>
     </main>
@@ -417,12 +393,13 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, nextTick, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
+import { reactive, ref, computed, watch, nextTick, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import ForoList from './components/ForoList.vue'
 import AporteDetalle from './components/AporteDetalle.vue'
 import FichaTecnicaInfo from './components/FichaTecnicaInfo.vue'
 import { LS_KEY, PASOS, PREGUNTAS_DEFECTO } from './data/constants.js'
 import { yaReaccione, marcarReaccion } from './services/reacciones.js'
+import { aprendiz, salirAprendiz, revisarSesionAprendiz } from './services/sesionAprendiz.js'
 import { words, blank, fmtTime } from './utils/text.js'
 import {
   getAporteText,
@@ -440,6 +417,7 @@ import {
   verifyAdminSession,
   clearAdminToken,
   EVENTO_SESION_VENCIDA,
+  EVENTO_SESION_APRENDIZ_VENCIDA,
   verifyClaveAporte,
   calificarAporte,
   fijarJuicio,
@@ -455,9 +433,12 @@ const ActividadFichaCaso = defineAsyncComponent(() => import('./components/Activ
 const LicenciasInfo = defineAsyncComponent(() => import('./components/LicenciasInfo.vue'))
 const GlosarioInfo = defineAsyncComponent(() => import('./components/GlosarioInfo.vue'))
 const PanelProfe = defineAsyncComponent(() => import('./components/PanelProfe.vue'))
+const MiCuenta = defineAsyncComponent(() => import('./components/MiCuenta.vue'))
+const SrsInfo = defineAsyncComponent(() => import('./components/SrsInfo.vue'))
+const EvaluacionApp = defineAsyncComponent(() => import('./evaluacion/EvaluacionApp.vue'))
 
 // Estado de navegación y administración
-const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'caso-ficha' | 'licencias' | 'glosario' | 'repaso' | 'panel'
+const currentTab = ref('foro') // 'foro' | 'detalle' | 'editor' | 'ficha-tecnica' | 'srs' | 'caso-ficha' | 'licencias' | 'glosario' | 'repaso' | 'cuenta' | 'panel' | 'evaluacion'
 const aportesList = ref([])
 const aporteSeleccionado = ref(null)
 const cargandoAportes = ref(false)
@@ -485,17 +466,56 @@ let toastTimer = null
 /* ----- Valores derivados ----- */
 const totalWords = computed(() => words(state.aporte.respuesta))
 
+// Pestañas agrupadas: el foro, lo de estudiar y lo de evaluar. "activa" también cubre el detalle de un aporte
+const gruposNav = computed(() => {
+  const pestana = (id, icono, nombre, extra = {}) => ({ id, icono, nombre, activa: currentTab.value === id, ...extra })
+  return [
+    [
+      pestana('foro', '💬', 'Foro', { contador: aportesList.value.length, activa: ['foro', 'detalle'].includes(currentTab.value) }),
+      pestana('editor', '✍️', state.aporteIdPublicado ? 'Editando aporte' : 'Mi aporte', { ir: irAEditorNuevo })
+    ],
+    [
+      // Primero el SRS y luego la ficha: en un proyecto real se hacen en ese orden
+      pestana('srs', '📄', 'SRS'),
+      pestana('ficha-tecnica', '📘', 'Ficha técnica'),
+      pestana('caso-ficha', '🧩', 'Caso MAREA'),
+      pestana('licencias', '⚖️', 'Licencias'),
+      pestana('glosario', '📖', 'Glosario'),
+      pestana('repaso', '🎯', 'Repaso')
+    ],
+    [
+      pestana('evaluacion', '📝', 'Evaluación'),
+      ...(isAdmin.value ? [pestana('panel', '👨‍🏫', 'Panel del profe')] : [])
+    ]
+  ]
+})
+
+// Si la pestaña activa quedó escondida a un lado de la barra (en el celular), se trae a la vista
+const navEl = ref(null)
+watch(currentTab, () => {
+  nextTick(() => {
+    navEl.value?.querySelector('.nav-tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  })
+})
+
+// Un aporte viejo que se está editando con su clave de autor no necesita cuenta
+const editandoConClave = computed(() => Boolean(state.aporteIdPublicado && state.claveActiva))
+const autorDesdeCuenta = computed(() => !isAdmin.value && Boolean(aprendiz.value) && !editandoConClave.value)
+const necesitaCuenta = computed(() => !isAdmin.value && !aprendiz.value && !editandoConClave.value)
+
 const savedAtText = computed(() =>
   state.lastSavedAt ? 'Último guardado local: ' + fmtTime(state.lastSavedAt) : 'Sin guardar todavía'
 )
 
 const pillTone = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'ok'
+  if (currentTab.value === 'srs') return 'ok'
   if (currentTab.value === 'caso-ficha') return 'ok'
   if (currentTab.value === 'licencias') return 'ok'
   if (currentTab.value === 'glosario') return 'ok'
   if (currentTab.value === 'repaso') return 'ok'
   if (currentTab.value === 'panel') return 'ok'
+  if (currentTab.value === 'cuenta') return aprendiz.value ? 'ok' : 'warn'
   if (publicando.value) return 'busy'
   if (state.aporteIdPublicado) return 'ok'
   return 'warn'
@@ -503,11 +523,13 @@ const pillTone = computed(() => {
 
 const pillText = computed(() => {
   if (currentTab.value === 'ficha-tecnica') return 'Guía Informativa'
+  if (currentTab.value === 'srs') return 'Guía de requisitos'
   if (currentTab.value === 'caso-ficha') return 'Caso práctico'
   if (currentTab.value === 'licencias') return 'Guía de licencias'
   if (currentTab.value === 'glosario') return 'Glosario'
   if (currentTab.value === 'repaso') return 'Práctica de repaso'
   if (currentTab.value === 'panel') return 'Panel del Profe'
+  if (currentTab.value === 'cuenta') return aprendiz.value ? 'Sesión abierta' : 'Sin sesión'
   if (publicando.value) return 'Sincronizando con el servidor…'
   if (state.aporteIdPublicado) return 'Modo Edición / Publicado'
   return 'Borrador local'
@@ -585,6 +607,12 @@ function irAEditorNuevo() {
   currentTab.value = 'editor'
 }
 
+// Desde "Mi cuenta" se puede saltar al editor o al foro
+function irA(pestana) {
+  if (pestana === 'editor') irAEditorNuevo()
+  else currentTab.value = pestana
+}
+
 function cancelarEdicionYLimpiar() {
   state.aporteIdPublicado = null
   state.claveActiva = ''
@@ -632,6 +660,12 @@ function onSesionVencida() {
     if (currentTab.value === 'panel') currentTab.value = 'foro'
     toast('Tu sesión de administrador venció. Vuelve a ingresar.')
   }
+}
+
+// El servidor avisó que la sesión del aprendiz ya no vale (venció o le reiniciaron el PIN)
+function onSesionAprendizVencida() {
+  salirAprendiz()
+  toast('Tu sesión de aprendiz venció. Entra otra vez con tu documento y PIN.')
 }
 
 /* ----- Carga de datos de la API ----- */
@@ -737,7 +771,8 @@ async function handleNuevoComentario(datosComentario) {
     toast('¡Comentario publicado en el foro!')
     cargarForo()
   } catch (error) {
-    toast('Error al publicar comentario en el servidor')
+    toast(error.message || 'Error al publicar comentario en el servidor')
+    if (error.datos?.necesitaCuenta) currentTab.value = 'cuenta'
   }
 }
 
@@ -814,6 +849,16 @@ async function handleEliminarAporte({ id, clave }) {
 }
 
 async function publicarAporteEnForo() {
+  if (necesitaCuenta.value) {
+    toast('Entra con tu cuenta de aprendiz para publicar')
+    currentTab.value = 'cuenta'
+    return
+  }
+  // Con cuenta, el nombre y la ficha del borrador (y de los PDF que se descarguen) son los de la cuenta
+  if (autorDesdeCuenta.value) {
+    state.aporte.autor = aprendiz.value.nombre
+    state.aporte.ficha = aprendiz.value.ficha
+  }
   if (!state.aporte.autor.trim()) {
     toast('Por favor escribe tu nombre como autor')
     currentTab.value = 'editor'
@@ -836,18 +881,8 @@ async function publicarAporteEnForo() {
     return
   }
 
-  const claveParaGuardar = (state.claveActiva || state.aporte.clave_edicion || '').trim()
-
-  // Los aprendices necesitan una clave para poder editar su aporte después
-  if (!state.aporteIdPublicado && !isAdmin.value && claveParaGuardar.length < 4) {
-    toast('Define una clave de autor de al menos 4 caracteres')
-    currentTab.value = 'editor'
-    nextTick(() => {
-      const f = document.getElementById('f-clave')
-      if (f) f.focus()
-    })
-    return
-  }
+  // Solo los aportes de antes de las cuentas se editan con clave de autor
+  const claveParaGuardar = (state.claveActiva || '').trim()
 
   publicando.value = true
   const eraEdicion = !!state.aporteIdPublicado
@@ -860,6 +895,7 @@ async function publicarAporteEnForo() {
     currentTab.value = 'foro'
   } catch (error) {
     alert(error.message || 'Error al conectar con la base de datos')
+    if (error.datos?.necesitaCuenta) currentTab.value = 'cuenta'
   } finally {
     publicando.value = false
   }
@@ -918,17 +954,25 @@ async function downloadPdf() {
 onMounted(async () => {
   lsRead()
   window.addEventListener(EVENTO_SESION_VENCIDA, onSesionVencida)
+  window.addEventListener(EVENTO_SESION_APRENDIZ_VENCIDA, onSesionAprendizVencida)
   try {
     sessionStorage.removeItem('admin_session') // sesión del sistema anterior
   } catch (e) {
     // Sin almacenamiento disponible
   }
   cargarForo()
+  revisarSesionAprendiz()
   // Restaurar la sesión de administrador si el token guardado sigue siendo válido
   isAdmin.value = await verifyAdminSession()
 })
 
+// Al entrar o salir cambia cuáles aportes son "míos", así que se recarga el foro
+watch(() => aprendiz.value?.documento, (ahora, antes) => {
+  if (ahora !== antes) cargarForo()
+})
+
 onBeforeUnmount(() => {
   window.removeEventListener(EVENTO_SESION_VENCIDA, onSesionVencida)
+  window.removeEventListener(EVENTO_SESION_APRENDIZ_VENCIDA, onSesionAprendizVencida)
 })
 </script>

@@ -5,6 +5,8 @@ import { crearAdaptadorSqlite, SCHEMA_SEGURIDAD } from '../server/database.js'
 import { SCHEMA_REACCIONES } from '../server/reacciones.js'
 import { SCHEMA_JUICIO, BANDOS, VEREDICTOS } from '../server/juicio.js'
 import { crearSesionAdmin } from '../server/seguridad.js'
+import { SCHEMA_APRENDICES } from '../server/aprendices.js'
+import { SCHEMA_ASISTENCIA } from '../server/asistencia.js'
 import app from '../server/app.js'
 
 // Base en memoria con las mismas tablas que server/db.js
@@ -30,6 +32,8 @@ function crearDb() {
   db.exec(SCHEMA_SEGURIDAD)
   db.exec(SCHEMA_REACCIONES)
   db.exec(SCHEMA_JUICIO)
+  db.exec(SCHEMA_APRENDICES)
+  db.exec(SCHEMA_ASISTENCIA)
   return crearAdaptadorSqlite(db)
 }
 
@@ -73,15 +77,15 @@ test('HTTP: abrir juicio, replicar con bando y dictar sentencia sin tocar la not
   assert.equal(abierto.body.juicio.veredicto, '')
 
   const fiscal = await pedir('/api/aportes/a1/comentarios', {
-    method: 'POST', body: { autor: 'Pedro', contenido: 'Acuso: la GPL no le sirve al cliente', bando: 'fiscalia' }
+    method: 'POST', body: { autor: 'Pedro', contenido: 'Acuso: la GPL no le sirve al cliente', bando: 'fiscalia' }, headers: comoAdmin()
   })
   assert.equal(fiscal.status, 201)
   assert.equal(fiscal.body.bando, 'fiscalia')
 
-  const sinBando = await pedir('/api/aportes/a1/comentarios', { method: 'POST', body: { autor: 'Rosa', contenido: 'Yo solo miro' } })
+  const sinBando = await pedir('/api/aportes/a1/comentarios', { method: 'POST', body: { autor: 'Rosa', contenido: 'Yo solo miro' }, headers: comoAdmin() })
   assert.equal(sinBando.body.bando, 'neutral', 'Sin bando, la réplica queda neutral')
 
-  const malo = await pedir('/api/aportes/a1/comentarios', { method: 'POST', body: { autor: 'X', contenido: 'Y', bando: 'jurado' } })
+  const malo = await pedir('/api/aportes/a1/comentarios', { method: 'POST', body: { autor: 'X', contenido: 'Y', bando: 'jurado' }, headers: comoAdmin() })
   assert.equal(malo.status, 400)
 
   const sentencia = await pedir('/api/aportes/a1/sentencia', {
@@ -107,7 +111,7 @@ test('HTTP: abrir juicio, replicar con bando y dictar sentencia sin tocar la not
 })
 
 test('HTTP: fuera de juicio las réplicas no llevan bando y no se puede sentenciar', async () => {
-  const replica = await pedir('/api/aportes/a2/comentarios', { method: 'POST', body: { autor: 'Ana', contenido: 'Ok', bando: 'fiscalia' } })
+  const replica = await pedir('/api/aportes/a2/comentarios', { method: 'POST', body: { autor: 'Ana', contenido: 'Ok', bando: 'fiscalia' }, headers: comoAdmin() })
   assert.equal(replica.status, 201)
   assert.equal(replica.body.bando, '')
 

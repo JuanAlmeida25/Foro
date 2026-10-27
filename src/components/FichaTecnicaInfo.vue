@@ -71,8 +71,9 @@
           <div class="concept-icon">🛡️</div>
           <h4>Soporte Legal y Registro</h4>
           <p>
-            Constituye el documento descriptivo obligatorio para registrar el software («soporte lógico») 
-            ante la Dirección Nacional de Derecho de Autor (DNDA) en Colombia.
+            Sirve de insumo para la «descripción del programa» o el material auxiliar, dos de los elementos que acepta
+            la Dirección Nacional de Derecho de Autor (DNDA) para registrar el software. El registro es voluntario:
+            los derechos de autor existen aunque no se registre.
           </p>
         </div>
       </div>
@@ -163,10 +164,11 @@
       <div class="iso25010-box">
         <div class="iso-title">
           <span>🌟</span>
-          <h4>Los 8 Pilares de Calidad de la Norma ISO/IEC 25010 (SQRe)</h4>
+          <h4>Los 8 Pilares de Calidad de la ISO/IEC 25010:2011 (SQuaRE)</h4>
         </div>
         <p>
-          Cualquier ficha técnica debe evaluar y declarar cómo el software responde a estas 8 características de calidad:
+          Este es el modelo clásico de 8 características, el que más se usa todavía en la formación. Una buena ficha
+          técnica declara cómo el software responde a cada una:
         </p>
         <div class="iso-pillars-grid">
           <div v-for="p in pilaresIso" :key="p.nombre" class="pillar-card">
@@ -174,6 +176,11 @@
             <span>{{ p.detalle }}</span>
           </div>
         </div>
+        <p class="iso-nota">
+          📌 Ojo: la edición <b>ISO/IEC 25010:2023</b> reemplazó a la de 2011. Ahora son 9 características: se agregó la
+          seguridad física u operacional (<i>safety</i>), la usabilidad pasó a llamarse capacidad de interacción y la
+          portabilidad, flexibilidad. Si citan la norma en un documento real, citen la de 2023.
+        </p>
       </div>
     </section>
 
@@ -345,7 +352,7 @@
           <b>Metodología para la socialización en el ambiente de aprendizaje:</b>
           <p>
             Al responder y debatir estas preguntas con tu instructor y compañeros, sustenta tus argumentos 
-            mencionando normas específicas (ej. <em>ISO/IEC 25010</em>, <em>Ley 23 de 1982</em>, <em>Decreto 1360 de 1989</em>) 
+            mencionando normas específicas (ej. <em>ISO/IEC 25010</em>, <em>Ley 23 de 1982</em>,  <em>Decreto 1360 de 1989, hoy compilado en el Decreto 1066 de 2015</em>) 
             y contrasta con casos reales experimentados en tu proyecto formativo.
           </p>
         </div>
@@ -535,36 +542,36 @@ const estructuraPartes = [
 
 const normasInternacionales = [
   {
-    codigo: 'ISO/IEC 25010:2011',
-    organismo: 'ISO / IEC (SQRe)',
+    codigo: 'ISO/IEC 25010:2023',
+    organismo: 'ISO / IEC (SQuaRE)',
     nombre: 'Modelo de Calidad del Producto de Software',
-    descripcion: 'Estándar internacional que sustituyó a la ISO 9126. Define el modelo universal para evaluar y especificar la calidad de un producto de software a través de 8 características principales.',
+    descripcion: 'Estándar internacional que sustituyó a la ISO 9126. La edición de 2023 reemplazó a la de 2011 (que tenía 8 características) y define el modelo de calidad del producto con 9 características, entre ellas la nueva seguridad física u operacional (safety).',
     aplicacion: 'Proporciona la estructura exacta para definir los requisitos no funcionales y los criterios de aceptación en la ficha técnica.'
   },
   {
     codigo: 'ISO/IEC/IEEE 29148:2018',
     organismo: 'ISO / IEC / IEEE',
     nombre: 'Ingeniería de Requisitos del Software',
-    descripcion: 'Estándar moderno que reemplazó a la tradicional norma IEEE 830. Establece directrices para la especificación, validación y gestión de los requisitos en el ciclo de vida del software.',
+    descripcion: 'Estándar que reemplazó a la tradicional norma IEEE 830 en 2011 (la edición vigente es la de 2018, confirmada por ISO en 2024). Establece directrices para la especificación, validación y gestión de los requisitos en el ciclo de vida del software.',
     aplicacion: 'Dicta las pautas para redactar requerimientos precisos, verificables y sin ambigüedades dentro de la ficha técnica.'
   },
   {
     codigo: 'IEEE 830-1998',
     organismo: 'IEEE',
     nombre: 'Práctica Recomendada para la ERS (Software Requirements Specification)',
-    descripcion: 'Referente histórico fundamental en la formación técnica del SENA. Estructura la Especificación de Requisitos de Software detallando requerimientos funcionales y no funcionales.',
+    descripcion: 'Referente histórico en la formación técnica del SENA, reemplazado por la ISO/IEC/IEEE 29148 en 2011. Estructura la Especificación de Requisitos de Software detallando requerimientos funcionales y no funcionales.',
     aplicacion: 'Sirve de guía pedagógica para estructurar las secciones de alcance y módulos funcionales en las fichas técnicas del proyecto formativo.'
   },
   {
-    codigo: 'ISO/IEC/IEEE 12207:2017',
+    codigo: 'ISO/IEC/IEEE 12207:2026',
     organismo: 'ISO / IEC / IEEE',
     nombre: 'Procesos del Ciclo de Vida del Software',
-    descripcion: 'Marco de trabajo integral que define los procesos que se llevan a cabo desde la concepción hasta el retiro del software, incluyendo los procesos de soporte y documentación técnica.',
-    aplicacion: 'Justifica formalmente la ficha técnica como un entregable obligatorio del proceso de documentación y aseguramiento de la configuración.'
+    descripcion: 'Marco de trabajo integral que define los procesos que se llevan a cabo desde la concepción hasta el retiro del software, incluyendo los procesos de soporte y documentación técnica. La edición de abril de 2026 reemplazó a la de 2017.',
+    aplicacion: 'Ubica la ficha técnica dentro de los procesos de documentación y gestión de la configuración del ciclo de vida.'
   },
   {
-    codigo: 'ISO/IEC 25040:2011',
-    organismo: 'ISO / IEC (SQRe)',
+    codigo: 'ISO/IEC 25040',
+    organismo: 'ISO / IEC (SQuaRE)',
     nombre: 'Proceso de Evaluación de la Calidad del Software',
     descripcion: 'Define el proceso paso a paso para evaluar si un producto cumple con los criterios de calidad y especificaciones pactadas.',
     aplicacion: 'Orienta a los evaluadores e instructores sobre cómo verificar si el software en ejecución satisface lo declarado en la ficha técnica.'
@@ -594,10 +601,10 @@ const normasColombianas = [
   {
     tipo: 'Decreto Reglamentario',
     anio: '1989',
-    codigo: 'Decreto 1360 de 1989',
+    codigo: 'Decreto 1360 de 1989 (hoy Decreto 1066 de 2015)',
     nombre: 'Reglamentación de Inscripción del Software en la DNDA',
-    descripcion: 'Reglamenta formalmente la inscripción del «soporte lógico» (software) en el Registro Nacional de Derecho de Autor en Colombia, definiéndolo como programa de computador, descripción de programa y material auxiliar.',
-    impacto: 'La ficha técnica actúa como el documento técnico oficial requerido por la Dirección Nacional de Derecho de Autor (DNDA) para tramitar el registro del software.'
+    descripcion: 'Reglamentó la inscripción del «soporte lógico» (software) en el Registro Nacional de Derecho de Autor, definiéndolo como programa de computador, descripción de programa y material auxiliar. Fue compilado y derogado por el Decreto 1066 de 2015 (arts. 2.6.1.3.1 y siguientes), que es el que se cita hoy.',
+    impacto: 'Para registrar el software, la DNDA pide al menos uno de esos tres elementos; la ficha técnica no se exige por nombre, pero sirve de insumo para la descripción del programa. El registro es voluntario y declarativo (Decisión Andina 351, arts. 52 y 53).'
   },
   {
     tipo: 'Tratado Internacional CAN',
@@ -636,8 +643,8 @@ const normasColombianas = [
     anio: 'ICONTEC',
     codigo: 'NTC-ISO/IEC 25010',
     nombre: 'Adopción Colombiana del Modelo de Calidad del Software',
-    descripcion: 'Norma técnica oficial homologada por ICONTEC en Colombia. Integra las mejores prácticas mundiales de calidad de software adaptadas al contexto productivo nacional.',
-    impacto: 'Es el estándar oficial que rige las licitaciones públicas y auditorías técnicas de calidad de software ante entidades del Estado colombiano.'
+    descripcion: 'Adopción por ICONTEC de la norma internacional de calidad del software. Como toda NTC, es de uso voluntario.',
+    impacto: 'Es una norma técnica de referencia: las entidades públicas y privadas pueden incluirla en sus pliegos o contratos como requisito técnico, pero ninguna ley la vuelve obligatoria para todas las licitaciones.'
   }
 ]
 
@@ -648,7 +655,7 @@ const preguntasSocializar = [
   },
   {
     id: 'ps2',
-    pregunta: 'Entre las 8 características de calidad de la norma ISO/IEC 25010 (Adecuación funcional, Rendimiento, Compatibilidad, Usabilidad, Fiabilidad, Seguridad, Mantenibilidad y Portabilidad), ¿cuáles dos consideran más críticas en su proyecto formativo y por qué?'
+    pregunta: 'Entre las 8 características de calidad del modelo clásico de la norma ISO/IEC 25010:2011 (Adecuación funcional, Rendimiento, Compatibilidad, Usabilidad, Fiabilidad, Seguridad, Mantenibilidad y Portabilidad), ¿cuáles dos consideran más críticas en su proyecto formativo y por qué?'
   },
   {
     id: 'ps3',
@@ -1095,6 +1102,12 @@ onMounted(() => {
 }
 
 /* Caja ISO 25010 Pilares */
+.iso25010-box .iso-nota {
+  margin-top: 14px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
 .iso25010-box {
   background: var(--surface);
   border: 1px solid var(--line);

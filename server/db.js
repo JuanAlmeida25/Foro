@@ -51,6 +51,21 @@ db.exec(`
     created_at TEXT NOT NULL,
     FOREIGN KEY(aporte_id) REFERENCES aportes(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS evaluaciones (
+    id TEXT PRIMARY KEY,
+    aprendiz TEXT NOT NULL,
+    ficha TEXT NOT NULL DEFAULT '',
+    aciertos INTEGER NOT NULL,
+    total INTEGER NOT NULL,
+    porcentaje INTEGER NOT NULL,
+    aprobado INTEGER NOT NULL,
+    tiempo_empleado INTEGER NOT NULL DEFAULT 0,
+    infracciones INTEGER NOT NULL DEFAULT 0,
+    motivo_finalizacion TEXT NOT NULL DEFAULT '',
+    detalle_json TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+  );
 `)
 
 // Migración segura: agregar columnas si la tabla ya existía sin ellas

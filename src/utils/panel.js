@@ -24,18 +24,23 @@ export function estadoNota(calificacion) {
 // "Ana  María" y "ana maría" son la misma persona; los espacios dobles no cuentan
 const claveNombre = nombre => normalizar(nombre).replace(/\s+/g, ' ')
 
+// Con cuenta de aprendiz manda el documento (así cambie cómo se escribe el nombre);
+// lo publicado antes de las cuentas se sigue juntando por el nombre
+const clavePersona = ({ documento, autor }) => (documento ? `doc:${documento}` : `nombre:${claveNombre(autor)}`)
+
 // Una fila por aprendiz. Si alguien publicó varios aportes, cuenta la mejor nota.
 // Las réplicas que cuentan son las que hizo en aportes ajenos (no en el suyo ni en la guía).
 export function resumenPorAprendiz(aportes, replicas) {
   const deAprendices = (aportes || []).filter(a => a.id !== ID_GUIA_OFICIAL)
-  const autorDeAporte = new Map(deAprendices.map(a => [a.id, claveNombre(a.autor)]))
+  const autorDeAporte = new Map(deAprendices.map(a => [a.id, clavePersona(a)]))
   const filas = new Map()
 
-  const filaDe = (nombre, ficha = '') => {
-    const clave = claveNombre(nombre)
+  const filaDe = (persona, ficha = '') => {
+    const clave = clavePersona(persona)
     if (!filas.has(clave)) {
       filas.set(clave, {
-        autor: String(nombre).trim(),
+        autor: String(persona.autor).trim(),
+        documento: persona.documento || '',
         ficha,
         aportes: [],
         nota: null,
@@ -48,7 +53,7 @@ export function resumenPorAprendiz(aportes, replicas) {
   }
 
   for (const a of deAprendices) {
-    const fila = filaDe(a.autor, a.ficha || '')
+    const fila = filaDe(a, a.ficha || '')
     if (!fila.ficha && a.ficha) fila.ficha = a.ficha
     fila.aportes.push(a.id)
     if (!fila.primerAporte || a.created_at < fila.primerAporte) fila.primerAporte = a.created_at
@@ -59,8 +64,8 @@ export function resumenPorAprendiz(aportes, replicas) {
 
   for (const r of replicas || []) {
     if (!autorDeAporte.has(r.aporte_id)) continue
-    if (autorDeAporte.get(r.aporte_id) === claveNombre(r.autor)) continue
-    filaDe(r.autor).replicas++
+    if (autorDeAporte.get(r.aporte_id) === clavePersona(r)) continue
+    filaDe(r).replicas++
   }
 
   for (const fila of filas.values()) {

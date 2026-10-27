@@ -12,6 +12,9 @@ import { buildSeed, SEED_APORTE_ID } from './seed.js'
 import { hashClave } from './seguridad.js'
 import { SCHEMA_REACCIONES } from './reacciones.js'
 import { SCHEMA_JUICIO } from './juicio.js'
+import { SCHEMA_APRENDICES } from './aprendices.js'
+import { SCHEMA_ASISTENCIA } from './asistencia.js'
+import { SCHEMA_ENTREGAS_CASO } from './entregasCaso.js'
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || ''
 
@@ -26,6 +29,25 @@ export const SCHEMA_SEGURIDAD = `
   );
 
   CREATE INDEX IF NOT EXISTS intentos_fallidos_idx ON intentos_fallidos (ip, objetivo, created_at);
+`
+
+export const SCHEMA_EVALUACIONES = `
+  CREATE TABLE IF NOT EXISTS evaluaciones (
+    id TEXT PRIMARY KEY,
+    aprendiz TEXT NOT NULL,
+    ficha TEXT NOT NULL DEFAULT '',
+    aciertos INTEGER NOT NULL,
+    total INTEGER NOT NULL,
+    porcentaje INTEGER NOT NULL,
+    aprobado INTEGER NOT NULL,
+    tiempo_empleado INTEGER NOT NULL DEFAULT 0,
+    infracciones INTEGER NOT NULL DEFAULT 0,
+    motivo_finalizacion TEXT NOT NULL DEFAULT '',
+    detalle_json TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS evaluaciones_created_at_idx ON evaluaciones (created_at DESC);
 `
 
 const SCHEMA_POSTGRES = `
@@ -53,7 +75,7 @@ const SCHEMA_POSTGRES = `
   );
 
   CREATE INDEX IF NOT EXISTS comentarios_aporte_id_idx ON comentarios (aporte_id);
-` + SCHEMA_SEGURIDAD + SCHEMA_REACCIONES + SCHEMA_JUICIO
+` + SCHEMA_SEGURIDAD + SCHEMA_REACCIONES + SCHEMA_JUICIO + SCHEMA_EVALUACIONES + SCHEMA_APRENDICES + SCHEMA_ASISTENCIA + SCHEMA_ENTREGAS_CASO
 
 // Convierte "SELECT ... WHERE id = ?" en "SELECT ... WHERE id = $1" para Postgres.
 // Los valores siempre viajan como parámetros, nunca dentro del texto SQL.
@@ -232,6 +254,10 @@ async function createSqliteAdapter() {
   db.exec(SCHEMA_SEGURIDAD)
   db.exec(SCHEMA_REACCIONES)
   db.exec(SCHEMA_JUICIO)
+  db.exec(SCHEMA_EVALUACIONES)
+  db.exec(SCHEMA_APRENDICES)
+  db.exec(SCHEMA_ASISTENCIA)
+  db.exec(SCHEMA_ENTREGAS_CASO)
 
   const adaptador = crearAdaptadorSqlite(db)
   await migrarSeguridad(adaptador)

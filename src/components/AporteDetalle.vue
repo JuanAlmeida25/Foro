@@ -50,7 +50,25 @@
           </button>
         </template>
 
-        <!-- Botones de Usuario / Autor (solo si el aporte tiene clave de autor) -->
+        <!-- Botones del dueño con cuenta: su sesión basta, sin clave -->
+        <template v-else-if="aporte.es_mio">
+          <button
+            class="btn sm"
+            type="button"
+            @click="$emit('iniciar-edicion', { aporte, clave: '' })"
+          >
+            ✏️ Editar mi aporte
+          </button>
+          <button
+            class="btn ghost sm danger"
+            type="button"
+            @click="confirmarEliminarPropio"
+          >
+            Eliminar
+          </button>
+        </template>
+
+        <!-- Botones de Usuario / Autor (aportes de antes de las cuentas, con clave de autor) -->
         <template v-else-if="aporte.tiene_clave">
           <button
             class="btn sm"
@@ -167,19 +185,26 @@
         </div>
       </div>
 
+      <!-- Sin cuenta no se replica: se le muestra cómo entrar -->
+      <div v-if="!isAdmin && !aprendiz" class="sheet form sin-cuenta" style="background: var(--sunk);">
+        <p>👤 Para replicar entra con tu cuenta de aprendiz. Así tu réplica sale con tu nombre y nadie puede hacerse pasar por ti.</p>
+        <button class="btn primary sm" type="button" @click="$emit('ir-a-cuenta')">Entrar o registrarme</button>
+      </div>
+
       <!-- Formulario para agregar réplica/comentario -->
-      <form class="sheet form" style="background: var(--sunk);" @submit.prevent="enviarComentario">
+      <form v-else class="sheet form" style="background: var(--sunk);" @submit.prevent="enviarComentario">
         <div class="row2">
-          <div>
-            <label class="lbl" for="c-autor">Tu nombre</label>
+          <div v-if="isAdmin">
+            <label class="lbl" for="c-autor">Nombre con el que replicas</label>
             <input
               id="c-autor"
               v-model="nuevoComentario.autor"
               class="inp"
-              placeholder="Ej. Juan Pérez"
+              placeholder="Ej. Instructor"
               required
             />
           </div>
+          <p v-else class="replica-como">Replicas como <strong>{{ aprendiz.nombre }}</strong></p>
           <div>
             <label class="lbl" for="c-cita">Texto o idea citada del aporte (opcional)</label>
             <input
@@ -418,6 +443,7 @@ import { CRITERIOS_RUBRICA, PLANTILLAS_RETRO } from '../data/rubrica.js'
 import { BANDOS_JUICIO, VEREDICTOS_JUICIO, bandoPorId, veredictoPorId, contarBandos } from '../data/juicio.js'
 import BotonUtil from './BotonUtil.vue'
 import TextoConGlosario from './TextoConGlosario.vue'
+import { aprendiz } from '../services/sesionAprendiz.js'
 
 const props = defineProps({
   aporte: { type: Object, required: true },
@@ -434,6 +460,7 @@ const emit = defineEmits([
   'reaccionar',
   'fijar-juicio',
   'dictar-sentencia',
+  'ir-a-cuenta',
   'toast'
 ])
 
@@ -537,6 +564,12 @@ function confirmarEliminarAdmin() {
   }
 }
 
+function confirmarEliminarPropio() {
+  if (confirm('¿Seguro que quieres eliminar tu aporte? Se borran también sus réplicas y no hay vuelta atrás.')) {
+    emit('eliminar-aporte', { id: props.aporte.id, clave: '' })
+  }
+}
+
 function abrirModalClave(accion) {
   accionPendiente.value = accion
   claveIngresada.value = ''
@@ -562,8 +595,10 @@ function confirmarAccionConClave() {
 }
 
 async function enviarComentario() {
-  if (!nuevoComentario.autor.trim() || !nuevoComentario.contenido.trim()) {
-    errorMsg.value = 'Por favor completa tu nombre y el comentario'
+  // El aprendiz no escribe su nombre: el servidor lo saca de su cuenta
+  const autor = props.isAdmin ? nuevoComentario.autor.trim() : aprendiz.value?.nombre || ''
+  if (!autor || !nuevoComentario.contenido.trim()) {
+    errorMsg.value = props.isAdmin ? 'Por favor completa tu nombre y el comentario' : 'Escribe tu comentario'
     return
   }
 
@@ -573,7 +608,7 @@ async function enviarComentario() {
   try {
     emit('comentario-agregado', {
       aporteId: props.aporte.id,
-      autor: nuevoComentario.autor.trim(),
+      autor,
       comentario_citado: nuevoComentario.comentario_citado.trim(),
       contenido: nuevoComentario.contenido.trim(),
       bando: props.aporte.juicio ? nuevoComentario.bando : ''
@@ -588,6 +623,20 @@ async function enviarComentario() {
 </script>
 
 <style scoped>
+.sin-cuenta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sin-cuenta p,
+.replica-como {
+  margin: 0;
+  color: var(--muted);
+}
+
 /* Con la rúbrica el modal de calificar crece: en pantallas bajitas se desplaza por dentro */
 .modal-box {
   max-height: calc(100vh - 40px);

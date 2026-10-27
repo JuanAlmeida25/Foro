@@ -1,4 +1,4 @@
-# Actividad de aprendizaje: Ficha técnica de un producto de software
+# Actividad de aprendizaje: SRS y ficha técnica de un producto de software
 
 ## Caso "MAREA": la cooperativa que quería dejar el cuaderno
 
@@ -7,10 +7,10 @@
 | **Programa de formación** | Tecnólogo en Análisis y Desarrollo de Software (ADSO) |
 | **Competencia relacionada** | Establecer requisitos de la solución de software de acuerdo con estándares y procedimiento técnico *(el instructor ajusta el código de la competencia según el diseño curricular vigente de la ficha)* |
 | **Resultados de aprendizaje** | RA1. Identificar y documentar las características técnicas, funcionales y no funcionales de un producto de software. RA2. Aplicar la normatividad nacional e internacional de calidad, derechos de autor y protección de datos en la documentación del producto. |
-| **Duración sugerida** | 6 horas: 1 h de lectura y análisis del caso, 3 h de elaboración de la ficha, 1 h de preguntas de análisis y 1 h de socialización |
+| **Duración sugerida** | 8 horas: 1 h de lectura y análisis del caso, 2 h de redacción del SRS, 3 h de elaboración de la ficha, 1 h de preguntas de análisis y 1 h de socialización |
 | **Modalidad** | Grupos de 2 a 3 aprendices (también se puede hacer de forma individual) |
-| **Producto a entregar** | 1) Ficha técnica diligenciada con código `FT-ADSO-2026-XX`. 2) Tabla de supuestos y vacíos de información. 3) Respuestas a las preguntas de análisis. Todo en un solo documento PDF o Markdown, publicado como aporte en el foro. |
-| **Material de apoyo** | Módulo "Ficha Técnica" del foro: estructura estándar de 8 apartados, normas internacionales (ISO/IEC 25010, ISO/IEC/IEEE 29148, IEEE 830, ISO/IEC/IEEE 12207, ISO/IEC 25040) y normatividad colombiana (Ley 23 de 1982, Decreto 1360 de 1989, Decisión Andina 351 de 1993, Ley 527 de 1999, Ley 1273 de 2009, Ley 1581 de 2012, NTC-ISO/IEC 25010). |
+| **Producto a entregar** | Dos documentos compartidos en el aporte del foro: 1) el SRS con código `SRS-ADSO-2026-XX`; 2) la ficha técnica con código `FT-ADSO-2026-XX`, la tabla de supuestos y vacíos de información y las respuestas a las preguntas de análisis. |
+| **Material de apoyo** | Pestaña "📄 SRS" del foro (estructura IEEE 830 / ISO/IEC/IEEE 29148 y cómo redactar requisitos). Módulo "Ficha Técnica" del foro: estructura estándar de 8 apartados, normas internacionales (ISO/IEC 25010, ISO/IEC/IEEE 29148, IEEE 830, ISO/IEC/IEEE 12207, ISO/IEC 25040) y normatividad colombiana (Ley 23 de 1982, Decreto 1360 de 1989, hoy compilado en el Decreto 1066 de 2015, Decisión Andina 351 de 1993, Ley 527 de 1999, Ley 1273 de 2009, Ley 1581 de 2012, NTC-ISO/IEC 25010). |
 
 ---
 
@@ -134,20 +134,80 @@ Sigan los pasos en orden. No se salten el paso 2: es el que diferencia a un anal
    |---|---|---|---|---|
 
    *Pista: hay al menos 6. Revisen usuarios concurrentes, servidor, garantía, resolución de pantalla, iOS, versión, factura electrónica, idioma y titularidad del código.*
-3. **Clasificación por apartados (30 min).** Ubiquen cada dato subrayado en uno de los 8 apartados de la ficha. Si un dato sirve para dos apartados, úsenlo en ambos.
-4. **Auditoría de licencias (30 min).** Hagan una tabla con cada librería y herramienta del stack: nombre, versión, licencia, tipo (permisiva, copyleft o restrictiva), dónde se usa y si es compatible con el modelo de licencia que el cliente quiere. Marquen en rojo las que generen conflicto y propongan una solución.
-5. **Diligenciamiento de la plantilla (2 h).** Llenen la plantilla de la sección 4. Reglas:
+3. **Redacción del SRS (2 h).** Antes de la ficha va el SRS: primero se dice qué debe hacer el sistema y después se describe el producto. Llenen la plantilla de la sección 4. Reglas:
+   - Asignen su código: `SRS-ADSO-2026-` seguido del número de su grupo.
+   - Cada requisito lleva código (`RF-01`, `RNF-01`), pide una sola cosa, es verificable y tiene su criterio de aceptación.
+   - Mínimo 10 requisitos funcionales y 6 no funcionales medibles, con su característica de ISO/IEC 25010.
+   - En la matriz de trazabilidad digan de qué documento del caso salió cada requisito; si salió de un supuesto, márquenlo con **[S#]**.
+4. **Clasificación por apartados (30 min).** Ubiquen cada dato subrayado en uno de los 8 apartados de la ficha. Si un dato sirve para dos apartados, úsenlo en ambos.
+5. **Auditoría de licencias (30 min).** Hagan una tabla con cada librería y herramienta del stack: nombre, versión, licencia, tipo (permisiva, copyleft o restrictiva), dónde se usa y si es compatible con el modelo de licencia que el cliente quiere. Marquen en rojo las que generen conflicto y propongan una solución.
+6. **Diligenciamiento de la ficha técnica (2 h).** Llenen la plantilla de la sección 5. Los módulos y los requisitos no funcionales salen del SRS: no los inventen de nuevo, resúmanlos. Reglas:
    - Asignen su propio código de ficha: `FT-ADSO-2026-` seguido del número de su grupo.
    - Usen versionamiento semántico (SemVer: `MAYOR.MENOR.PARCHE`). Justifiquen el número que elijan.
    - Todo requisito no funcional debe ser **medible** (un número, una unidad, una condición). "El sistema debe ser rápido" no vale; "el registro de un pesaje se guarda en menos de 3 s sin conexión" sí vale.
    - Cada requisito de calidad debe indicar la característica de ISO/IEC 25010 a la que pertenece.
    - Donde usen un supuesto, márquenlo con **[S#]** y remitan a la tabla del paso 2.
-6. **Preguntas de análisis (40 min).** Respondan las preguntas de la sección 5 con argumentos y citando la norma correspondiente.
-7. **Entrega y socialización (1 h).** Publiquen el documento como aporte en el foro. En la socialización cada grupo presenta en 5 minutos su solución al dilema de licencias y su supuesto más arriesgado.
+7. **Preguntas de análisis (40 min).** Respondan las preguntas de la sección 6 con argumentos y citando la norma correspondiente.
+8. **Entrega y socialización (1 h).** Compartan los dos documentos (SRS y ficha) en su aporte del foro. En la socialización cada grupo presenta en 5 minutos su solución al dilema de licencias y su supuesto más arriesgado.
 
 ---
 
-## 4. Plantilla de la ficha técnica (para diligenciar)
+## 4. Plantilla del SRS (para diligenciar)
+
+> **SERVICIO NACIONAL DE APRENDIZAJE – SENA**
+> **ESPECIFICACIÓN DE REQUISITOS DE SOFTWARE (SRS)**
+> Programa ADSO • Actividad Caso MAREA
+
+| Código | Versión del documento | Estado | Fecha |
+|---|---|---|---|
+| SRS-ADSO-2026-__ | | ☐ Borrador ☐ En revisión ☐ Aprobado | |
+
+### 1. Introducción
+
+| Campo | Respuesta |
+|---|---|
+| Propósito del documento y a quién va dirigido | |
+| Alcance: qué hace MAREA, qué NO hace y qué beneficio trae | |
+| Definiciones, siglas y abreviaturas | |
+| Referencias (documentos del caso, actas y normas) | |
+
+### 2. Descripción general
+
+| Campo | Respuesta |
+|---|---|
+| Perspectiva del producto (componentes y con qué se conecta) | |
+| Funciones principales, en resumen | |
+| Características de los usuarios (rol, experiencia, limitaciones) | |
+| Restricciones (legales, de hardware, de red, tecnológicas) | |
+| Suposiciones y dependencias (con los mismos [S#] de la tabla de supuestos) | |
+
+### 3. Requisitos específicos
+
+**Interfaces externas** (de usuario, de hardware como la balanza Bluetooth y el GPS, de software y de comunicaciones):
+
+**Requisitos funcionales (mínimo 10):**
+
+| Código | El sistema debe… | Rol | Prioridad | Criterio de aceptación |
+|---|---|---|---|---|
+| RF-01 | | | ☐ Alta ☐ Media ☐ Baja | |
+
+**Requisitos no funcionales (mínimo 6):**
+
+| Código | Requisito medible | Característica ISO/IEC 25010 | Cómo se verifica |
+|---|---|---|---|
+| RNF-01 | | | |
+
+**Requisitos legales y de cumplimiento** (Ley 1581 de 2012, licencias de terceros, derechos de autor):
+
+### 4. Matriz de trazabilidad
+
+| Requisito | De dónde salió (Doc 1 a 4 o S#) | Prueba con la que se verifica |
+|---|---|---|
+| | | |
+
+---
+
+## 5. Plantilla de la ficha técnica (para diligenciar)
 
 > **SERVICIO NACIONAL DE APRENDIZAJE – SENA**
 > **FICHA TÉCNICA DE PRODUCTO DE SOFTWARE**
@@ -254,7 +314,7 @@ Sigan los pasos en orden. No se salten el paso 2: es el que diferencia a un anal
 | Titular de los derechos morales (y fundamento legal) | |
 | Titular de los derechos patrimoniales (y fundamento legal) | |
 | Redistribución con fines comerciales: ¿permitida o prohibida? | |
-| Registro ante la DNDA (Decreto 1360 de 1989) | |
+| Registro ante la DNDA (Decreto 1066 de 2015, antes Decreto 1360 de 1989) | |
 
 **Auditoría de licencias de terceros:**
 
@@ -283,7 +343,7 @@ Sigan los pasos en orden. No se salten el paso 2: es el que diferencia a un anal
 
 ---
 
-## 5. Preguntas de análisis
+## 6. Preguntas de análisis
 
 Respondan cada pregunta en máximo 10 líneas, con argumentos y citando la norma que aplica.
 
@@ -296,29 +356,30 @@ Respondan cada pregunta en máximo 10 líneas, con argumentos y citando la norma
 
 ---
 
-## 6. Rúbrica de evaluación
+## 7. Rúbrica de evaluación
 
 Puntaje total: **100 puntos**. Aprobado: **70 puntos o más**.
 
 | Criterio | Excelente | Bueno | Básico | Insuficiente | Puntos |
 |---|---|---|---|---|---|
-| **1. Identificación y alcance (apartados 1 y 2)** | Todos los campos completos, SemVer justificado, objetivos medibles y exclusiones explícitas (10) | Campos completos, con objetivos poco precisos o sin exclusiones claras (7) | Faltan 2 o 3 campos o el alcance es confuso (4) | Apartados incompletos o copiados del ejemplo (0-2) | /10 |
-| **2. Requerimientos técnicos (apartados 3 y 4)** | Distingue mínimo y recomendado para móvil, oficina y servidor; versiones mínimas y plataformas no soportadas (15) | Completo, pero sin distinguir mínimo y recomendado en algún componente (11) | Solo cubre un tipo de dispositivo o le faltan versiones (6) | Datos inventados o contradictorios con el caso (0-3) | /15 |
-| **3. Módulos funcionales (apartado 5)** | Identifica 7 o más módulos coherentes con roles, incluyendo sincronización sin conexión y anulación sin borrado (10) | De 5 a 6 módulos coherentes (7) | Menos de 5 módulos o sin relación con roles (4) | Lista genérica que no corresponde al caso (0-2) | /10 |
-| **4. Calidad y datos personales (apartado 6)** | 6 o más RNF medibles, bien clasificados en ISO/IEC 25010 y con forma de verificarlos; tratamiento de datos personales completo, con datos de menores (15) | RNF medibles pero con alguna clasificación errada; datos personales parciales (11) | RNF no medibles o sin clasificar (6) | Sin RNF o sin análisis de datos personales (0-3) | /15 |
-| **5. Licenciamiento y propiedad intelectual (apartado 7)** | Auditoría completa de licencias, detecta conflictos GPL y CC BY-NC, propone una solución viable y analiza la titularidad con fundamento legal (20) | Detecta un solo conflicto o la titularidad está poco fundamentada (14) | Lista licencias sin analizar compatibilidad (8) | Sin auditoría o con conclusiones legales erradas (0-4) | /20 |
-| **6. Soporte y garantía (apartado 8)** | Resuelve la contradicción de 6 meses frente a 1 año con un supuesto declarado; define cobertura, tiempos por severidad y política de versiones (5) | Completo pero sin tiempos por severidad (4) | Solo menciona el periodo (2) | Vacío (0) | /5 |
-| **7. Tabla de supuestos** | 6 o más vacíos o contradicciones bien identificados, con supuesto y pregunta al cliente; supuestos marcados [S#] en la ficha (15) | De 4 a 5 vacíos bien tratados (11) | De 2 a 3 vacíos (6) | Ninguno o inventados (0-3) | /15 |
-| **8. Preguntas de análisis y presentación** | Respuestas argumentadas con normas citadas correctamente; documento ordenado y sin errores de ortografía (10) | Argumentadas, con alguna norma mal citada (7) | Respuestas superficiales (4) | Sin responder o copiadas (0-2) | /10 |
+| **1. Documento SRS (IEEE 830 / ISO/IEC/IEEE 29148)** | Estructura completa; 10 o más RF con código, prioridad y criterio de aceptación; RNF medibles con su característica ISO/IEC 25010; requisitos legales; matriz de trazabilidad hacia los documentos del caso y los supuestos (20) | Estructura completa, pero algunos requisitos sin criterio de aceptación o sin trazabilidad (14) | Faltan secciones o hay requisitos ambiguos («rápido», «fácil», «gestionar») o con dos cosas en uno (8) | Sin SRS, o es una copia de la ficha técnica con otro título (0-4) | /20 |
+| **2. Identificación y alcance (apartados 1 y 2)** | Todos los campos completos, SemVer justificado, objetivos medibles y exclusiones explícitas (10) | Campos completos, con objetivos poco precisos o sin exclusiones claras (7) | Faltan 2 o 3 campos o el alcance es confuso (4) | Apartados incompletos o copiados del ejemplo (0-2) | /10 |
+| **3. Requerimientos técnicos (apartados 3 y 4)** | Distingue mínimo y recomendado para móvil, oficina y servidor; versiones mínimas y plataformas no soportadas (10) | Completo, pero sin distinguir mínimo y recomendado en algún componente (7) | Solo cubre un tipo de dispositivo o le faltan versiones (4) | Datos inventados o contradictorios con el caso (0-2) | /10 |
+| **4. Módulos funcionales (apartado 5)** | Identifica 7 o más módulos coherentes con roles y con los RF del SRS, incluyendo sincronización sin conexión y anulación sin borrado (5) | De 5 a 6 módulos coherentes (4) | Menos de 5 módulos o sin relación con roles (2) | Lista genérica que no corresponde al caso (0-1) | /5 |
+| **5. Calidad y datos personales (apartado 6)** | 6 o más RNF medibles, bien clasificados en ISO/IEC 25010 y con forma de verificarlos; tratamiento de datos personales completo, con datos de menores (10) | RNF medibles pero con alguna clasificación errada; datos personales parciales (7) | RNF no medibles o sin clasificar (4) | Sin RNF o sin análisis de datos personales (0-2) | /10 |
+| **6. Licenciamiento y propiedad intelectual (apartado 7)** | Auditoría completa de licencias, detecta conflictos GPL y CC BY-NC, propone una solución viable y analiza la titularidad con fundamento legal (15) | Detecta un solo conflicto o la titularidad está poco fundamentada (11) | Lista licencias sin analizar compatibilidad (6) | Sin auditoría o con conclusiones legales erradas (0-3) | /15 |
+| **7. Soporte y garantía (apartado 8)** | Resuelve la contradicción de 6 meses frente a 1 año con un supuesto declarado; define cobertura, tiempos por severidad y política de versiones (5) | Completo pero sin tiempos por severidad (4) | Solo menciona el periodo (2) | Vacío (0) | /5 |
+| **8. Tabla de supuestos** | 6 o más vacíos o contradicciones bien identificados, con supuesto y pregunta al cliente; supuestos marcados [S#] en la ficha (15) | De 4 a 5 vacíos bien tratados (11) | De 2 a 3 vacíos (6) | Ninguno o inventados (0-3) | /15 |
+| **9. Preguntas de análisis y presentación** | Respuestas argumentadas con normas citadas correctamente; documento ordenado y sin errores de ortografía (10) | Argumentadas, con alguna norma mal citada (7) | Respuestas superficiales (4) | Sin responder o copiadas (0-2) | /10 |
 | | | | | | **/100** |
 
 ---
 
-## 7. Solucionario para el instructor
+## 8. Solucionario para el instructor
 
 > Esta sección es solo para el instructor. Retírela antes de compartir la guía con los aprendices.
 
-### 7.1 Vacíos y contradicciones sembrados en el caso
+### 8.1 Vacíos y contradicciones sembrados en el caso
 
 | # | Vacío o contradicción | Dónde | Supuesto razonable esperado |
 |---|---|---|---|
@@ -333,7 +394,31 @@ Puntaje total: **100 puntos**. Aprobado: **70 puntos o más**.
 | S9 | **Integración con la Autoridad de Pesca** ("¿eso se puede conectar?") | Audio | Fuera del alcance: solo se exporta el reporte de zonas en PDF o CSV. |
 | S10 | **Versión:** hubo una versión de prueba antes | Notas | La versión de prueba fue `0.x` (por ejemplo, `0.9.0`); la entrega del 30 de noviembre es la `1.0.0`. |
 
-### 7.2 Ficha técnica resuelta (resumen)
+### 8.2 SRS de referencia (resumen)
+
+Los RF salen de los documentos del caso. Se califica que estén bien redactados y trazados, no que coincidan palabra por palabra.
+
+| Código | Requisito | Rol | Prioridad | Fuente |
+|---|---|---|---|---|
+| RF-01 | Registrar el pesaje (socio, especie, kilos, precio) leyendo la balanza Bluetooth | Operaria | Alta | Doc 1 |
+| RF-02 | Guardar pesajes sin conexión y sincronizarlos al volver la señal | Operaria | Alta | Doc 1, Doc 3 |
+| RF-03 | Anular un pesaje con motivo, sin borrarlo, dejando el registro visible | Operaria y contadora | Alta | Doc 2 |
+| RF-04 | Registrar abonos y anticipos | Contadora | Alta | Doc 2 |
+| RF-05 | Generar la liquidación mensual por socio en PDF | Contadora | Alta | Doc 1, Doc 2 |
+| RF-06 | Consultar entregas y saldo propios desde el celular | Socio | Alta | Doc 1 |
+| RF-07 | Gestionar socios y beneficiarios con autorización de tratamiento de datos | Contadora | Alta | Doc 2 |
+| RF-08 | Autenticación con roles (gerente, contadora, acopio, socio) | Todos | Alta | Doc 2, Doc 3 |
+| RF-09 | Gráficas de ventas por especie | Gerente | Media | Doc 1 |
+| RF-10 | Registrar y mostrar en un mapa la zona de pesca de cada lancha | Operaria y gerente | Media | Doc 1 |
+| RF-11 | Emitir comprobante interno de compra (no es factura electrónica) [S6] | Contadora | Media | Doc 2 |
+
+- **Introducción:** alcance con exclusiones explícitas (factura DIAN [S6], Autoridad de Pesca [S9], iOS nativo [S5], wayuunaiki [S7]) y referencias a los 4 documentos y a las normas.
+- **Descripción general:** usuarios con sus limitaciones (socios mayores con baja visión), restricciones de red (3G intermitente), de hardware (2 GB de RAM), legales (Ley 1581, licencias GPL v3 y CC BY-NC) y suposiciones [S1] a [S4].
+- **RNF:** los mismos RNF-01 a RNF-07 de la ficha resuelta (sección 8.3).
+- **Legales:** autorización previa e informada (Ley 1581), datos de menores solo nombre y parentesco, reemplazar las librerías en conflicto si el producto es propietario y firmar la cesión de derechos patrimoniales antes de entregar.
+- **Trazabilidad:** cada requisito apunta a su fuente y a una prueba. Ejemplo: RF-02 → Doc 1 y Doc 3 → registrar 20 pesajes en modo avión y sincronizar sin pérdidas. Se valora que detecten requisitos sin fuente y pedidos del cliente que se les olvidaron.
+
+### 8.3 Ficha técnica resuelta (resumen)
 
 | Código | Versión del documento | Estado | Fecha de emisión |
 |---|---|---|---|
@@ -417,7 +502,7 @@ Puntaje total: **100 puntos**. Aprobado: **70 puntos o más**.
 - **Manuales:** manual de usuario por rol (con capturas, en lenguaje sencillo), manual técnico de instalación y despliegue, y documentación de la API.
 - **Recomendación:** como los aprendices terminan su etapa formativa, hay que dejar definido quién da el soporte después (cooperativa, SENA o un tercero) y entregar el código fuente con la documentación.
 
-### 7.3 Respuestas esperadas a las preguntas de análisis
+### 8.4 Respuestas esperadas a las preguntas de análisis
 
 **Pregunta 1. Dilema GPL.**
 La GPL v3 es una licencia *copyleft*: si se **distribuye** una obra que incorpora o enlaza código GPL, la obra completa debe distribuirse bajo GPL v3 (o compatible), con acceso al código fuente para quien la reciba. Aquí el APK se instala en los celulares de los socios, que son personas distintas de la cooperativa, así que hay distribución. Por lo tanto, **no se puede** distribuir MAREA como software propietario cerrado mientras la librería vaya dentro del APK. Alternativas válidas:
@@ -449,7 +534,7 @@ El art. 7 prohíbe tratar datos de niños, niñas y adolescentes, salvo los de n
 **Pregunta 6. Supuesto más riesgoso.**
 Respuesta más fuerte: **la titularidad (S8)**. Si se asume que el código es de la cooperativa y no lo es, pueden surgir conflictos legales al licenciarlo a la Gobernación, y la cooperativa podría perder la posibilidad de venderlo. Otras respuestas aceptables, si están bien argumentadas: **S1** (si son 300 usuarios y no 46, cambia el dimensionamiento del servidor y el costo) o **S6** (si la DIAN exige factura electrónica, se agrega un módulo grande con un proveedor tecnológico). Se califica la calidad del argumento sobre impacto en costo, tiempo y aspecto legal, no la elección en sí.
 
-### 7.4 Errores frecuentes a vigilar
+### 8.5 Errores frecuentes a vigilar
 
 - Poner "Licencia MIT" para todo el producto porque "casi todas las librerías son MIT", sin notar el conflicto GPL.
 - Afirmar que la cooperativa es la dueña "porque lo pidió", sin contrato escrito.
@@ -457,5 +542,8 @@ Respuesta más fuerte: **la titularidad (S8)**. Si se asume que el código es de
 - Copiar los requerimientos de hardware de la ficha de ejemplo FT-ADSO-2026-01, que corresponde a otro producto.
 - Olvidar el servidor en el apartado 3 o dejar iOS como "soportado" sin aclarar las limitaciones.
 - Tratar los datos de los menores igual que los de los adultos.
+- En el SRS: requisitos dobles ("registrar y liquidar") o sin criterio de aceptación, que no se pueden probar.
+- En el SRS: escribir el diseño en vez del requisito ("usar PostgreSQL") dentro de los RF; eso es una restricción, no una función.
+- Copiar los apartados de la ficha y llamarlos SRS: el SRS va antes y con más detalle, la ficha es el resumen del producto.
 
 > **Nota legal para el instructor:** las referencias normativas de este solucionario sirven como orientación pedagógica. Antes de usar la guía, verifique la vigencia de las normas y del reglamento interno de propiedad intelectual del SENA.

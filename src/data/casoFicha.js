@@ -1,7 +1,7 @@
-// Actividad "Caso MAREA": el aprendiz arma la ficha técnica de un software a partir
+// Actividad "Caso MAREA": el aprendiz arma el SRS y la ficha técnica de un software a partir
 // de pedazos de información regados en cuatro documentos (como pasa en la vida real).
 // La versión completa para imprimir está en actividades/actividad-ficha-tecnica-software.md
-// El solucionario vive aparte (casoFichaSolucionario.js) y solo se carga para el profe.
+// El solucionario vive en el servidor (server/casoFichaSolucionario.js) y solo se le entrega al profe.
 
 export const LS_CASO_FICHA_KEY = 'foro-caso-ficha-marea-v1'
 
@@ -9,9 +9,9 @@ export const INFO_ACTIVIDAD = [
   { campo: 'Programa de formación', detalle: 'Tecnólogo en Análisis y Desarrollo de Software (ADSO)' },
   { campo: 'Competencia relacionada', detalle: 'Establecer requisitos de la solución de software de acuerdo con estándares y procedimiento técnico (el instructor ajusta el código según el diseño curricular vigente de la ficha).' },
   { campo: 'Resultados de aprendizaje', detalle: 'RA1. Identificar y documentar las características técnicas, funcionales y no funcionales de un producto de software. RA2. Aplicar la normatividad nacional e internacional de calidad, derechos de autor y protección de datos en la documentación del producto.' },
-  { campo: 'Duración sugerida', detalle: '6 horas: 1 h de lectura y análisis del caso, 3 h de elaboración de la ficha, 1 h de preguntas de análisis y 1 h de socialización.' },
+  { campo: 'Duración sugerida', detalle: '8 horas: 1 h de lectura y análisis del caso, 2 h de redacción del SRS, 3 h de elaboración de la ficha, 1 h de preguntas de análisis y 1 h de socialización.' },
   { campo: 'Modalidad', detalle: 'Grupos de 2 a 3 aprendices' },
-  { campo: 'Producto a entregar', detalle: 'Ficha técnica diligenciada con código FT-ADSO-2026-XX, tabla de supuestos y vacíos, y respuestas a las preguntas de análisis. Todo en un PDF publicado como aporte en el foro.' }
+  { campo: 'Producto a entregar', detalle: 'Dos PDF compartidos en el aporte del foro: (1) el SRS con código SRS-ADSO-2026-XX y (2) la ficha técnica con código FT-ADSO-2026-XX, la tabla de supuestos y vacíos y las respuestas a las preguntas de análisis.' }
 ];
 
 export const PROPOSITO = [
@@ -119,11 +119,12 @@ export const EQUIPO = [
 export const INSTRUCCIONES = [
   { titulo: 'Lectura individual', tiempo: '20 min', texto: 'Cada integrante lee el caso completo y subraya con colores distintos: datos técnicos (hardware y software), funcionales (lo que hace el sistema), de calidad (tiempos, seguridad, usabilidad), legales (licencias, autoría, datos personales) y de soporte.' },
   { titulo: 'Cacería de vacíos y contradicciones', tiempo: '40 min', texto: 'En grupo, listen lo que falta, lo que se contradice o lo que está ambiguo. Para cada uno escriban el supuesto que van a asumir y la pregunta que le harían al cliente. Pista: hay al menos 6. Revisen usuarios concurrentes, servidor, garantía, resolución de pantalla, iOS, versión, factura electrónica, idioma y titularidad del código. No se salten este paso: es el que diferencia a un analista de un digitador.' },
+  { titulo: 'Redacción del SRS', tiempo: '2 h', texto: 'Antes de la ficha va el SRS: primero se dice qué debe hacer el sistema y después se describe el producto. Llenen la pestaña "Plantilla SRS" con la estructura de la IEEE 830 / ISO/IEC/IEEE 29148 (revisen la pestaña 📄 SRS del menú). Cada requisito lleva código (RF-01, RNF-01), es singular, verificable y tiene su criterio de aceptación. En la matriz de trazabilidad digan de qué documento del caso salió cada requisito; si salió de un supuesto, márquenlo con [S#].' },
   { titulo: 'Clasificación por apartados', tiempo: '30 min', texto: 'Ubiquen cada dato subrayado en uno de los 8 apartados de la ficha. Si un dato sirve para dos apartados, úsenlo en ambos.' },
   { titulo: 'Auditoría de licencias', tiempo: '30 min', texto: 'Para cada librería y herramienta del stack anoten: nombre, versión, licencia, tipo (permisiva, copyleft o restrictiva), dónde se usa y si es compatible con el modelo de licencia que quiere el cliente. Marquen las que generen conflicto y propongan una solución.' },
-  { titulo: 'Diligenciamiento de la plantilla', tiempo: '2 h', texto: 'Llenen la plantilla de la pestaña "Plantilla". Usen su propio código FT-ADSO-2026- seguido del número de grupo y versionamiento semántico (MAYOR.MENOR.PARCHE) justificado. Todo requisito no funcional debe ser medible y llevar su característica ISO/IEC 25010. Donde usen un supuesto, márquenlo con [S#].' },
+  { titulo: 'Diligenciamiento de la ficha técnica', tiempo: '2 h', texto: 'Llenen la pestaña "Plantilla ficha". Los módulos y los requisitos no funcionales de la ficha salen del SRS: no los inventen de nuevo, resúmanlos. Usen su propio código FT-ADSO-2026- seguido del número de grupo y versionamiento semántico (MAYOR.MENOR.PARCHE) justificado. Todo requisito no funcional debe ser medible y llevar su característica ISO/IEC 25010. Donde usen un supuesto, márquenlo con [S#].' },
   { titulo: 'Preguntas de análisis', tiempo: '40 min', texto: 'Respondan las preguntas con argumentos y citando la norma correspondiente, en máximo 10 líneas cada una.' },
-  { titulo: 'Entrega y socialización', tiempo: '1 h', texto: 'Descarguen el PDF y publíquenlo como aporte en el foro. En la socialización cada grupo presenta en 5 minutos su solución al dilema de licencias y su supuesto más arriesgado.' }
+  { titulo: 'Entrega y socialización', tiempo: '1 h', texto: 'Descarguen los dos PDF (SRS y ficha) y compártanlos en su aporte del foro. En la socialización cada grupo presenta en 5 minutos su solución al dilema de licencias y su supuesto más arriesgado.' }
 ];
 
 // Plantilla de la ficha: los 8 apartados de FichaTecnicaInfo.vue más el encabezado y la tabla de supuestos.
@@ -213,7 +214,7 @@ export const APARTADOS_PLANTILLA = [
       { id: 'a7-morales', label: 'Titular de los derechos morales (y fundamento legal)', largo: true },
       { id: 'a7-patrimoniales', label: 'Titular de los derechos patrimoniales (y fundamento legal)', largo: true },
       { id: 'a7-redistribucion', label: 'Redistribución con fines comerciales: ¿permitida o prohibida?' },
-      { id: 'a7-registro', label: 'Registro ante la DNDA (Decreto 1360 de 1989)' },
+      { id: 'a7-registro', label: 'Registro ante la DNDA (Decreto 1066 de 2015, antes Decreto 1360 de 1989)' },
       { id: 'a7-auditoria', label: 'Auditoría de licencias de terceros', ayuda: 'Uno por línea: librería – licencia – tipo – ¿compatible? – acción', largo: true }
     ]
   },
@@ -237,6 +238,59 @@ export const APARTADOS_PLANTILLA = [
   }
 ];
 
+// Plantilla del SRS, con la estructura de la pestaña 📄 SRS (IEEE 830 / ISO/IEC/IEEE 29148).
+// Los ids empiezan por "srs-" para que no se pisen con los de la ficha en el localStorage
+export const APARTADOS_SRS = [
+  {
+    id: 'srs-encabezado',
+    titulo: 'Encabezado del documento',
+    campos: [
+      { id: 'srs-codigo', label: 'Código', ayuda: 'SRS-ADSO-2026-__ (número de su grupo)' },
+      { id: 'srs-version', label: 'Versión del documento' },
+      { id: 'srs-estado', label: 'Estado', ayuda: 'Borrador, En revisión o Aprobado' },
+      { id: 'srs-fecha', label: 'Fecha' }
+    ]
+  },
+  {
+    id: 's1',
+    titulo: '1. Introducción',
+    campos: [
+      { id: 'srs-proposito', label: 'Propósito del documento y a quién va dirigido', largo: true },
+      { id: 'srs-alcance', label: 'Alcance: qué hace MAREA, qué NO hace y qué beneficio trae', largo: true },
+      { id: 'srs-definiciones', label: 'Definiciones, siglas y abreviaturas', ayuda: 'Una por línea: término – significado (PWA, APK, acopio, liquidación…)', largo: true },
+      { id: 'srs-referencias', label: 'Referencias', ayuda: 'Documentos del caso, actas y normas que citan', largo: true }
+    ]
+  },
+  {
+    id: 's2',
+    titulo: '2. Descripción general',
+    campos: [
+      { id: 'srs-perspectiva', label: 'Perspectiva del producto (componentes y con qué se conecta)', largo: true },
+      { id: 'srs-funciones', label: 'Funciones principales, en resumen', largo: true },
+      { id: 'srs-usuarios', label: 'Características de los usuarios (rol, experiencia, limitaciones)', largo: true },
+      { id: 'srs-restricciones', label: 'Restricciones (legales, de hardware, de red, tecnológicas)', largo: true },
+      { id: 'srs-suposiciones', label: 'Suposiciones y dependencias', ayuda: 'Usen los mismos [S#] de la tabla de supuestos', largo: true }
+    ]
+  },
+  {
+    id: 's3',
+    titulo: '3. Requisitos específicos',
+    campos: [
+      { id: 'srs-interfaces', label: 'Interfaces externas', ayuda: 'De usuario, de hardware (balanza Bluetooth, GPS), de software y de comunicaciones', largo: true },
+      { id: 'srs-rf', label: 'Requisitos funcionales (mínimo 10)', ayuda: 'Uno por línea: RF-01 – el sistema debe… – rol – prioridad (Alta, Media o Baja) – criterio de aceptación', largo: true },
+      { id: 'srs-rnf', label: 'Requisitos no funcionales (mínimo 6)', ayuda: 'Uno por línea: RNF-01 – requisito medible – característica ISO/IEC 25010 – cómo se verifica', largo: true },
+      { id: 'srs-legales', label: 'Requisitos legales y de cumplimiento', ayuda: 'Ley 1581 de 2012, licencias de terceros, derechos de autor', largo: true }
+    ]
+  },
+  {
+    id: 's4',
+    titulo: '4. Matriz de trazabilidad',
+    campos: [
+      { id: 'srs-trazabilidad', label: 'Trazabilidad', ayuda: 'Uno por línea: código del requisito – de dónde salió (Doc 1 a 4 o S#) – prueba con la que se verifica', largo: true }
+    ]
+  }
+]
+
 export const PREGUNTAS_CASO = [
   { id: 'pc1', titulo: 'Dilema GPL', pregunta: 'La librería balanza-bt-link tiene licencia GPL v3 y va dentro del APK que se instala en los celulares de los socios. Don Efraín quiere que el software sea "solo de la cooperativa" (propietario). ¿Es posible cumplir ambas cosas? Propongan al menos tres alternativas y digan cuál recomiendan y por qué.' },
   { id: 'pc2', titulo: '¿De quién es el código?', pregunta: 'Según la Ley 23 de 1982 y la Decisión Andina 351 de 1993, ¿quién es el titular de los derechos morales y quién de los derechos patrimoniales de MAREA? No hay contrato firmado y el acta de inicio no menciona derechos de autor. ¿Qué documento recomiendan firmar antes de la entrega y qué debería decir?' },
@@ -254,22 +308,27 @@ export const RUBRICA_CASO = [
     bueno: 'Campos completos, con objetivos poco precisos o sin exclusiones claras.',
     basico: 'Faltan 2 o 3 campos o el alcance es confuso.',
     insuficiente: 'Apartados incompletos o copiados del ejemplo.' },
-  { criterio: 'Requerimientos técnicos (apartados 3 y 4)', puntos: 15,
+  { criterio: 'Documento SRS (IEEE 830 / ISO/IEC/IEEE 29148)', puntos: 20,
+    excelente: 'Estructura completa; 10 o más RF con código, prioridad y criterio de aceptación; RNF medibles con su característica ISO/IEC 25010; requisitos legales; matriz de trazabilidad hacia los documentos del caso y los supuestos.',
+    bueno: 'Estructura completa, pero algunos requisitos sin criterio de aceptación o sin trazabilidad.',
+    basico: 'Faltan secciones o hay requisitos ambiguos («rápido», «fácil», «gestionar») o con dos cosas en uno.',
+    insuficiente: 'Sin SRS, o es una copia de la ficha técnica con otro título.' },
+  { criterio: 'Requerimientos técnicos (apartados 3 y 4)', puntos: 10,
     excelente: 'Distingue mínimo y recomendado para móvil, oficina y servidor; versiones mínimas y plataformas no soportadas.',
     bueno: 'Completo, pero sin distinguir mínimo y recomendado en algún componente.',
     basico: 'Solo cubre un tipo de dispositivo o le faltan versiones.',
     insuficiente: 'Datos inventados o contradictorios con el caso.' },
-  { criterio: 'Módulos funcionales (apartado 5)', puntos: 10,
-    excelente: '7 o más módulos coherentes con roles, incluyendo sincronización sin conexión y anulación sin borrado.',
+  { criterio: 'Módulos funcionales (apartado 5)', puntos: 5,
+    excelente: '7 o más módulos coherentes con roles y con los RF del SRS, incluyendo sincronización sin conexión y anulación sin borrado.',
     bueno: 'De 5 a 6 módulos coherentes.',
     basico: 'Menos de 5 módulos o sin relación con roles.',
     insuficiente: 'Lista genérica que no corresponde al caso.' },
-  { criterio: 'Calidad y datos personales (apartado 6)', puntos: 15,
+  { criterio: 'Calidad y datos personales (apartado 6)', puntos: 10,
     excelente: '6 o más RNF medibles, bien clasificados en ISO/IEC 25010 y con forma de verificarlos; tratamiento de datos completo, con datos de menores.',
     bueno: 'RNF medibles con alguna clasificación errada; datos personales parciales.',
     basico: 'RNF no medibles o sin clasificar.',
     insuficiente: 'Sin RNF o sin análisis de datos personales.' },
-  { criterio: 'Licenciamiento y propiedad intelectual (apartado 7)', puntos: 20,
+  { criterio: 'Licenciamiento y propiedad intelectual (apartado 7)', puntos: 15,
     excelente: 'Auditoría completa, detecta los conflictos GPL y CC BY-NC, propone una solución viable y analiza la titularidad con fundamento legal.',
     bueno: 'Detecta un solo conflicto o la titularidad está poco fundamentada.',
     basico: 'Lista licencias sin analizar compatibilidad.',

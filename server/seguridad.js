@@ -10,13 +10,22 @@ const scrypt = promisify(crypto.scrypt)
 /* Clave de administrador                                              */
 /* ------------------------------------------------------------------ */
 
-// La clave vive SOLO en el servidor: nunca se envía al navegador.
-// - Por defecto es CLAVE-VIEJA, en Vercel y en local.
-// - Para cambiarla sin tocar el código, define la variable de entorno ADMIN_KEY
-//   en Vercel (Settings → Environment Variables) y vuelve a desplegar.
-const CLAVE_ADMIN_POR_DEFECTO = 'CLAVE-VIEJA'
+// La clave vive SOLO en el servidor: nunca se envía al navegador ni se escribe en el código.
+// - Se define con la variable de entorno ADMIN_KEY: en Vercel (Settings → Environment
+//   Variables, y volver a desplegar) y en local dentro de .env.local.
+// - Si falta o es muy corta, el ingreso de administrador queda cerrado. El foro sigue
+//   funcionando para los aprendices; es mejor un profe sin llave que una puerta sin candado.
+export const LONGITUD_MINIMA_CLAVE_ADMIN = 6
 
-const ADMIN_KEY = (process.env.ADMIN_KEY || '').trim() || CLAVE_ADMIN_POR_DEFECTO
+const ADMIN_KEY = (process.env.ADMIN_KEY || '').trim()
+const adminHabilitado = ADMIN_KEY.length >= LONGITUD_MINIMA_CLAVE_ADMIN
+
+if (!adminHabilitado) {
+  console.warn(
+    `[seguridad] ADMIN_KEY no está definida o tiene menos de ${LONGITUD_MINIMA_CLAVE_ADMIN} caracteres: ` +
+    'el ingreso de administrador queda deshabilitado.'
+  )
+}
 
 // Compara dos textos sin revelar por el tiempo de respuesta cuántos caracteres coinciden.
 function igualesSeguro(a, b) {
@@ -26,7 +35,7 @@ function igualesSeguro(a, b) {
 }
 
 export function esClaveAdmin(clave) {
-  return typeof clave === 'string' && clave !== '' && igualesSeguro(clave, ADMIN_KEY)
+  return adminHabilitado && typeof clave === 'string' && clave !== '' && igualesSeguro(clave, ADMIN_KEY)
 }
 
 /* ------------------------------------------------------------------ */
@@ -36,7 +45,17 @@ export function esClaveAdmin(clave) {
 // Al iniciar sesión, el servidor entrega un token firmado que vence en 8 horas.
 // El navegador lo envía en cada petición (cabecera Authorization) en lugar de la clave.
 const DURACION_SESION_MS = 8 * 60 * 60 * 1000
-const secretoSesion = crypto.createHash('sha256').update('foro-sesion-admin:' + ADMIN_KEY).digest()
+
+// El secreto que firma los tokens sale de SESSION_SECRET (cámbienlo para cerrar todas las
+// sesiones abiertas). Si no existe, se deriva de ADMIN_KEY, que ya es larga y privada.
+// Sin ninguna de las dos se usa uno al azar: el admin no puede entrar de todas formas, y las
+// sesiones de los aprendices solo duran mientras viva el servidor (en Vercel, casi nada).
+const SESSION_SECRET = (process.env.SESSION_SECRET || '').trim()
+const secretoSesion = SESSION_SECRET
+  ? crypto.createHash('sha256').update('foro-sesion-admin:' + SESSION_SECRET).digest()
+  : adminHabilitado
+    ? crypto.createHash('sha256').update('foro-sesion-admin:' + ADMIN_KEY).digest()
+    : crypto.randomBytes(32)
 
 function firmar(texto) {
   return crypto.createHmac('sha256', secretoSesion).update(texto).digest('base64url')
@@ -60,6 +79,44 @@ export function sesionAdminValida(token) {
 export function tokenDeLaPeticion(req) {
   const cabecera = req.headers.authorization || ''
   return cabecera.startsWith('Bearer ') ? cabecera.slice(7).trim() : ''
+}
+
+/* ------------------------------------------------------------------ */
+/* Sesión de aprendiz                                                  */
+/* ------------------------------------------------------------------ */
+
+// Una jornada larga de clase. En el PC del salón igual se cierra al cerrar la pestaña.
+// El token lleva la "versión" del PIN: si el profe se lo reinicia, las sesiones viejas se mueren solas.
+// Viaja en la cabecera X-Aprendiz-Token, aparte del Authorization del admin, para no confundirlos.
+const DURACION_SESION_APRENDIZ_MS = 6 * 60 * 60 * 1000
+
+export function crearSesionAprendiz(documento, version) {
+  const expira = Date.now() + DURACION_SESION_APRENDIZ_MS
+  const datos = `aprendiz.${documento}.${version}.${expira}`
+  return { token: `${datos}.${firmar(datos)}`, expira }
+}
+
+// Devuelve { documento, version } si el token es bueno y no ha vencido; si no, null
+export function leerSesionAprendiz(token) {
+  if (typeof token !== 'string' || !token) return null
+  const partes = token.split('.')
+  if (partes.length !== 5 || partes[0] !== 'aprendiz') return null
+  const [, documento, version, expira, firma] = partes
+  if (!/^\d{6,15}$/.test(documento) || !/^\d+$/.test(version)) return null
+  if (!Number.isFinite(Number(expira)) || Number(expira) < Date.now()) return null
+  if (!igualesSeguro(firma, firmar(partes.slice(0, 4).join('.')))) return null
+  return { documento, version: Number(version) }
+}
+
+// Identificador de un aprendiz para mostrárselo a sus compañeros sin regar su número de documento.
+// Va firmado con el secreto del servidor: no se puede devolver al documento probando cédulas
+export function referenciaAprendiz(documento) {
+  return firmar(`ref.${documento}`).slice(0, 16)
+}
+
+export function tokenAprendizDeLaPeticion(req) {
+  const cabecera = req.headers['x-aprendiz-token']
+  return typeof cabecera === 'string' ? cabecera.trim() : ''
 }
 
 /* ------------------------------------------------------------------ */

@@ -17,6 +17,8 @@ import {
 } from '../server/reacciones.js'
 import { crearAdaptadorSqlite, SCHEMA_SEGURIDAD } from '../server/database.js'
 import { SCHEMA_JUICIO } from '../server/juicio.js'
+import { SCHEMA_APRENDICES } from '../server/aprendices.js'
+import { SCHEMA_ASISTENCIA } from '../server/asistencia.js'
 import { MENSAJE_DEMASIADOS_INTENTOS, crearSesionAdmin } from '../server/seguridad.js'
 import app from '../server/app.js'
 
@@ -32,6 +34,8 @@ function crearDb() {
   db.exec(SCHEMA_SEGURIDAD)
   db.exec(SCHEMA_REACCIONES)
   db.exec(SCHEMA_JUICIO)
+  db.exec(SCHEMA_APRENDICES)
+  db.exec(SCHEMA_ASISTENCIA)
   return crearAdaptadorSqlite(db)
 }
 

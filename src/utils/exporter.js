@@ -220,7 +220,8 @@ export async function buildPdfPreguntasSocializar(preguntas, respuestas) {
 }
 
 // PDF de la ficha técnica que el aprendiz llenó en la pestaña del Caso MAREA
-export async function buildPdfFichaCaso(apartados, preguntas, respuestas) {
+// La hoja carta con márgenes y el párrafo que salta de página solo, compartidos por la ficha y el SRS del caso
+function lienzoCaso(respuestas) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' })
   const M = 54
   const W = doc.internal.pageSize.getWidth() - M * 2
@@ -255,20 +256,48 @@ export async function buildPdfFichaCaso(apartados, preguntas, respuestas) {
 
   const valor = id => (respuestas[id] || '').trim() || '(Sin diligenciar)'
 
-  para('SERVICIO NACIONAL DE APRENDIZAJE - SENA', 10, 'bold', 2, [89, 101, 117])
-  para('Ficha Técnica de Producto de Software', 16, 'bold', 2, [35, 64, 182])
-  para('Programa ADSO • Actividad Caso MAREA', 10, 'normal', 16, [89, 101, 117])
+  const encabezado = titulo => {
+    para('SERVICIO NACIONAL DE APRENDIZAJE - SENA', 10, 'bold', 2, [89, 101, 117])
+    para(titulo, 16, 'bold', 2, [35, 64, 182])
+    para('Programa ADSO • Actividad Caso MAREA', 10, 'normal', 16, [89, 101, 117])
+  }
 
-  apartados.forEach(a => {
-    ensure(50)
-    para(a.titulo, 12.5, 'bold', 6, [35, 64, 182])
-    a.campos.forEach(c => {
-      ensure(30)
-      para(c.label, 9.5, 'bold', 2, [89, 101, 117])
-      para(valor(c.id), 10, 'normal', 8, [40, 50, 65])
+  const apartados = lista => {
+    lista.forEach(a => {
+      ensure(50)
+      para(a.titulo, 12.5, 'bold', 6, [35, 64, 182])
+      a.campos.forEach(c => {
+        ensure(30)
+        para(c.label, 9.5, 'bold', 2, [89, 101, 117])
+        para(valor(c.id), 10, 'normal', 8, [40, 50, 65])
+      })
+      y += 6
     })
-    y += 6
-  })
+  }
+
+  return { doc, ensure, para, valor, encabezado, apartados }
+}
+
+// SRS del caso: mismo estilo de la ficha, con los participantes arriba porque son los autores del documento
+export async function buildPdfSrsCaso(apartadosSrs, respuestas) {
+  const { doc, ensure, para, encabezado, apartados } = lienzoCaso(respuestas)
+  encabezado('Especificación de Requisitos de Software (SRS)')
+
+  if ((respuestas.participantes || '').trim()) {
+    ensure(40)
+    para('Elaborado por', 9.5, 'bold', 2, [89, 101, 117])
+    para(respuestas.participantes.trim(), 10, 'normal', 14, [40, 50, 65])
+  }
+
+  apartados(apartadosSrs)
+  return doc.output('blob')
+}
+
+export async function buildPdfFichaCaso(apartados, preguntas, respuestas) {
+  const lienzo = lienzoCaso(respuestas)
+  const { doc, ensure, para, valor } = lienzo
+  lienzo.encabezado('Ficha Técnica de Producto de Software')
+  lienzo.apartados(apartados)
 
   ensure(50)
   para('Preguntas de análisis', 12.5, 'bold', 8, [35, 64, 182])
@@ -278,6 +307,12 @@ export async function buildPdfFichaCaso(apartados, preguntas, respuestas) {
     para(p.pregunta, 9.5, 'italic', 4, [89, 101, 117])
     para(valor(p.id), 10, 'normal', 12, [40, 50, 65])
   })
+
+  if ((respuestas.participantes || '').trim()) {
+    ensure(40)
+    para('Participantes en la creación de la ficha técnica', 12.5, 'bold', 6, [35, 64, 182])
+    para(respuestas.participantes.trim(), 10, 'normal', 12, [40, 50, 65])
+  }
 
   return doc.output('blob')
 }
